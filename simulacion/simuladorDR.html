@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Simulador Avanzado de Desprendimiento de Retina</title>
+  <link rel="stylesheet" href="d.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+/* Estilos para las sombras del instrumento */
+.instrument-tip-shadow {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 19;
+  filter: blur(5px);
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s;
+}
+
+.instrument-rod-shadow {
+  position: absolute;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 6px;
+  transform-origin: left center;
+  z-index: 18;
+  filter: blur(4px);
+  transition: transform 0.1s;
+}
+
+.instrument-base-shadow {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 18;
+  filter: blur(4px);
+  bottom: 17px;
+  right: 23px;
+  transform: translate(35px, -35px);
+}
+    /* Estilos para efectos de láser y cauterio */
+    .laser-spot {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: radial-gradient(circle, rgba(255,50,50,0.8) 0%, rgba(255,0,0,0.6) 70%, transparent 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(255,100,100,0.7);
+      pointer-events: none;
+      z-index: 20;
+      animation: laser-pulse 0.5s ease-out;
+    }
+
+    .laser-burn-permanent {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    .cautery-effect {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: radial-gradient(circle, rgba(255,200,0,0.8) 0%, rgba(255,150,0,0.6) 70%, transparent 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(255,200,0,0.7);
+      pointer-events: none;
+      z-index: 20;
+      animation: cautery-fade 1s ease-out forwards;
+    }
+
+    .cautery-mark-permanent {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    @keyframes laser-pulse {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+
+    @keyframes cautery-fade {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 0; }
+    }
+
+    /* Estilos para el instrumento único - PALO GRIS */
+    .instrument-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 30;
+    }
+    
+    .instrument-rod {
+      position: absolute;
+      height: 8px;
+      background: linear-gradient(to right, #888, #ccc);
+      border-radius: 4px;
+      transform-origin: left center;
+      z-index: 30;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    
+    .instrument-tip {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ccc;
+      z-index: 31;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      transform: translate(-50%, -50%);
+    }
+    
+    .instrument-base {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #555;
+      z-index: 29;
+      box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    }
+    
+    .instrument-tip.active-vitrectomo {
+      background: #3b82f6;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+    }
+    
+    .instrument-tip.active-laser {
+      background: #ff5555;
+      box-shadow: 0 0 15px rgba(255, 85, 85, 0.7);
+    }
+    
+    .instrument-tip.active-cautery {
+      background: #ff9900;
+      box-shadow: 0 0 15px rgba(255, 153, 0, 0.7);
+    }
+    
+    .instrument-tip.active-pfc {
+      background: #00bfff;
+      box-shadow: 0 0 15px rgba(0, 191, 255, 0.7);
+    }
+    
+    .instrument-tip.active-gas {
+      background: #7cfc00;
+      box-shadow: 0 0 15px rgba(124, 252, 0, 0.7);
+    }
+    
+    /* Macula del tamaño como en app3 */
+    .macula {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(55, 55, 2, 0.3);
+      top: 50%;
+      left: 50%;
+      transform: translate(calc(-50% + 100px), -50%);
+      box-shadow: 0 0 20px rgba(200, 200, 100, 0.5);
+      z-index: 10;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- CASO CLÍNICO -->
+  <div id="clinical-case">
+    <div id="clinical-case-content">
+      <h2>CASO CLÍNICO: DESPRENDIMIENTO DE RETINA REGMATÓGENO</h2>
+      
+      <h3>Paciente:</h3>
+      <p>Varón de 58 años, miope alto</p>
+      
+      <h3>Síntomas:</h3>
+      <p>Moscas volantes y pérdida de visión súbita en cuadrante superior temporal del ojo derecho</p>
+      
+      <h3>Hallazgos:</h3>
+      <ul>
+        <li>Desgarro retiniano en cuadrante superior temporal</li>
+        <li>Desprendimiento de retina parcial con afectación macular</li>
+        <li>Vítreo desprendido con tracción residual</li>
+      </ul>
+      
+      <h3>OBJETIVOS QUIRÚRGICOS:</h3>
+      <ol>
+        <li>Realizar vitrectomía posterior completa</li>
+        <li>Identificar y marcar agujero con endocauterio</li>
+        <li>Inyectar perfluorocarbono (PFC) para reaplicación retiniana</li>
+        <li>Aplicar endoláser alrededor de los desgarros</li>
+        <li>Considerar inyección de gas o aceite de silicona según evolución</li>
+      </ol>
+      
+      <button id="start-simulation-btn">Iniciar Simulación</button>
+    </div>
+  </div>
+  <div id="container">
+    <!-- SISTEMA DE ALERTAS -->
+    <div id="alert-system">
+      <div class="alert-container" id="retina-detachment-alert">
+        <div class="alert-icon">❗</div>
+        <div class="alert-content">
+          <h3>DESPRENDIMIENTO DE RETINA</h3>
+          <p>¡Emergencia! Se ha detectado desprendimiento retiniano. Suspender procedimiento e inyectar PFC inmediatamente.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="high-iop-alert">
+        <div class="alert-icon">📈</div>
+        <div class="alert-content">
+          <h3>PRESIÓN INTRAOCULAR ELEVADA</h3>
+          <p>PIO > 25 mmHg. Riesgo de daño al nervio óptico. Reducir flujo de irrigación y considerar paracentesis.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="vessel-damage-alert">
+        <div class="alert-icon">🩸</div>
+        <div class="alert-content">
+          <h3>HEMORRAGIA RETINIANA</h3>
+          <p>¡Daño vascular detectado! Aplicar presión suave con PFC y considerar coagulación con cauterio.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="wall-collision-alert">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">
+          <h3>COLISIÓN CON ESTRUCTURA OCULAR</h3>
+          <p>¡Advertencia! El instrumento ha contactado con la pared ocular. Retire inmediatamente y reevalúe la posición.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="retina-fixed-alert">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content">
+          <h3>RETINA FIJADA</h3>
+          <p>Procedimiento completado con éxito. La retina ha sido reposicionada y fijada con láser.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="gas-injected-alert">
+        <div class="alert-icon">💨</div>
+        <div class="alert-content">
+          <h3>GAS INYECTADO</h3>
+          <p>Gas SF6 inyectado con éxito. El paciente debe mantener posición prono durante 7 días.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss" id="index.html">Volver al Menú</button>
+      </div>
+      
+      <div class="alert-container" id="vitreous-removed-alert">
+        <div class="alert-icon">🧬</div>
+        <div class="alert-content">
+          <h3>VITREO REMOVIDO</h3>
+          <p>Vitrectomía completada. Proceda a localizar el agujero retiniano con cauterio.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="hole-located-alert">
+        <div class="alert-icon">📍</div>
+        <div class="alert-content">
+          <h3>AGUJERO LOCALIZADO</h3>
+          <p>Agujero retiniano marcado. Proceda a inyectar PFC para reposicionar la retina.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="vision-loss-alert">
+        <div class="alert-icon">👁️</div>
+        <div class="alert-content">
+          <h3>PÉRDIDA DE VISIÓN</h3>
+          <p>¡Precaución! Se ha aplicado cauterio en la mácula. Riesgo de pérdida visual permanente.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="surgery-complete-alert">
+        <div class="alert-icon">🏥</div>
+        <div class="alert-content">
+          <h3>CIRUGÍA COMPLETADA</h3>
+          <p>Procedimiento finalizado con éxito. La retina ha sido completamente reparada.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss" id="index.html">Volver al Menú</button>
+      </div>
+    </div>
+
+    <!-- MINI MAPA -->
+    <div id="miniMapContainer">
+      <svg id="eyeCrossSection" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <radialGradient id="bgGradient" cx="50%" cy="50%" r="70%">
+            <stop offset="0%" stop-color="#1E293B" />
+            <stop offset="100%" stop-color="#0F172A" />
+          </radialGradient>
+          <radialGradient id="lensGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#E0F7FA" stop-opacity="0.9" />
+            <stop offset="70%" stop-color="#B2EBF2" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#80DEEA" stop-opacity="0.7" />
+          </radialGradient>
+          <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="8" />
+            <feOffset dx="0" dy="4" result="offsetblur" />
+            <feComponentTransfer>
+              <feFuncA type="linear" slope="0.3" />
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="wrinkleFilter" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="turbulence" />
+            <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="5" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+        <rect width="800" height="600" fill="url(#bgGradient)" />
+        <ellipse id="lens-minimap" cx="400" cy="150" rx="100" ry="65" fill="url(#lensGradient)" filter="url(#dropShadow)" />
+        <ellipse cx="400" cy="150" rx="95" ry="60" fill="none" stroke="#B3E5FC" stroke-width="2" />
+        <circle id="iris-minimap" cx="400" cy="150" r="55" fill="none" stroke="url(#irisGradient)" stroke-width="15" />
+        <circle cx="400" cy="150" r="30" fill="#000000" />
+        <circle id="retina-wall" cx="400" cy="300" r="250" fill="none" stroke="#E0E0E0" stroke-width="4" />
+        <circle id="retina-minimap" cx="400" cy="300" r="240" fill="#400000" opacity="0.8" />
+        <circle id="miniCenter" cx="400" cy="300" r="8" fill="#00f7ff" />
+        <line id="probeLight" x1="225" y1="100" x2="350" y2="300" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" />
+        <line id="probeLightInner" x1="225" y1="100" x2="350" y2="300" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" />
+        <line id="probeForceps" x1="575" y1="100" x2="450" y2="300" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" />
+        <line id="probeForcepsInner" x1="575" y1="100" x2="450" y2="300" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" />
+      </svg>
+    </div>
+
+    <!-- PANEL DE INSTRUMENTOS -->
+    <div class="instrument-panel">
+      <button class="toggle-btn" id="btn-vitrectomo">Vitrectomo</button>
+      <button class="toggle-btn" id="btn-laser">Láser</button>
+      <button class="toggle-btn" id="btn-pfc">PFC</button>
+      <button class="toggle-btn" id="btn-cautery">Cauterio</button>
+      <button class="toggle-btn" id="btn-gas">Gas SF6</button>
+      <button class="toggle-btn" id="btn-simulate-detachment">Simular DR</button>
+    </div>
+
+    <!-- PANEL DE PARÁMETROS -->
+    <div class="control-panel">
+      <div class="vital-sign">
+        <span class="vital-label">Presión Intraocular:</span>
+        <span class="vital-value normal" id="iop-value">16 mmHg</span>
+      </div>
+      <div id="iop-gauge" class="gauge-container">
+        <div class="gauge-level" id="iop-level"></div>
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Perfusión Retiniana:</span>
+        <span class="vital-value normal" id="perfusion-value">95%</span>
+      </div>
+      <div id="perfusion-gauge" class="gauge-container">
+        <div class="gauge-level" id="perfusion-level"></div>
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Vitreo Removido:</span>
+        <span class="vital-value" id="vitreous-value">0%</span>
+      </div>
+      <div id="vitreous-gauge" class="gauge-container">
+        <div class="gauge-level" id="vitreous-level"></div>
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Nivel de PFC:</span>
+        <span class="vital-value" id="pfc-value">0%</span>
+      </div>
+      <div id="pfc-gauge" class="gauge-container">
+        <div class="gauge-level" id="pfc-level"></div>
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Nivel de Gas:</span>
+        <span class="vital-value" id="gas-value">0%</span>
+      </div>
+      <div id="gas-gauge" class="gauge-container">
+        <div class="gauge-level" id="gas-level"></div>
+      </div>
+    </div>
+
+    <!-- JOYSTICKS -->
+    <div id="joystick-light-container" class="joystick-container">
+      <div id="joystick-light" class="joystick">
+        <div class="joystick-handle"></div>
+      </div>
+      <div class="slider-container">
+        <label>Luz (Z)</label>
+        <input type="range" id="endo-z-slider" min="0" max="200" value="50">
+      </div>
+    </div>
+
+    <div id="joystick-vitrectomo-container" class="joystick-container">
+      <div id="joystick-vitrectomo" class="joystick">
+        <div class="joystick-handle"></div>
+      </div>
+      <div class="slider-container">
+        <label>Instrumento (Z)</label>
+        <input type="range" id="vitrectomo-z-slider" min="-250" max="-50" value="-150">
+        <button id="btn-precionar">Accionar</button>
+      </div>
+    </div>
+
+    <!-- RETINA CENTRAL -->
+    <div id="eye-chamber">
+      <div class="retina-container" id="retina">
+        <div class="retina-sphere">
+          <div class="retina-texture"></div>
+          <div class="retina-nerve"></div>
+          <div class="optic-disc">
+            <div class="optic-cup"></div>
+          </div>
+          <div class="macula"></div>
+          <div id="detached-retina-overlay"></div>
+          <div id="retina-edge-detachment"></div>
+          <div id="retinal-hole"></div>
+        </div>
+        <div id="light-mask"></div>
+        <div id="light-reflection"></div>
+        <div id="light-scatter" class="light-scatter"></div>
+        <div id="specular-highlight" class="specular-highlight"></div>
+        <!-- Dentro del div retina-container en SimuladorHV.html -->
+<div class="blood-vessels">
+  <svg viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <style type="text/css">
+        .blood-vessel {
+          stroke: #8B0000;
+          stroke-width: 1.5;
+          fill: #8b0808;
+          fill-opacity: 0.7;
+        }
+        .small-details {
+          stroke: #8B0000;
+          stroke-width: 1;
+          fill: none;
+        }
+      </style>
+    </defs>
+    
+    <!-- Vasos sanguíneos principales -->
+    <path d="M 558.00,952.00 L 552.00,938.00 L 538.00,922.00 L 499.00,901.00 L 477.00,882.00 L 448.00,821.00 L 432.00,801.00 L 415.00,791.00 L 366.00,773.00 L 346.00,760.00 L 331.00,745.00 L 317.00,721.00 L 301.00,676.00 L 281.00,651.00 L 301.00,722.00 L 338.00,790.00 L 364.00,863.00 L 368.00,881.00 L 368.00,905.00 L 364.00,923.00 L 361.00,925.00 L 365.00,895.00 L 357.00,857.00 L 331.00,789.00 L 297.00,729.00 L 275.00,654.00 L 260.00,630.00 L 239.00,607.00 L 226.00,585.00 L 218.00,554.00 L 215.00,514.00 L 208.00,544.00 L 210.00,574.00 L 253.00,694.00 L 251.00,721.00 L 236.00,759.00 L 238.00,811.00 L 229.00,837.00 L 227.00,835.00 L 234.00,811.00 L 231.00,757.00 L 246.00,716.00 L 247.00,700.00 L 242.00,677.00 L 205.00,586.00 L 194.00,615.00 L 164.00,653.00 L 154.00,686.00 L 144.00,704.00 L 125.00,723.00 L 110.00,733.00 L 101.00,735.00 L 124.00,720.00 L 141.00,701.00 L 162.00,645.00 L 188.00,614.00 L 196.00,599.00 L 200.00,584.00 L 199.00,544.00 L 207.00,512.00 L 166.00,542.00 L 125.00,561.00 L 83.00,601.00 L 66.00,608.00 L 58.00,607.00 L 82.00,597.00 L 120.00,557.00 L 166.00,534.00 L 205.00,505.00 L 209.00,501.00 L 209.00,482.00 L 203.00,458.00 L 195.00,449.00 L 153.00,424.00 L 124.00,415.00 L 101.00,404.00 L 71.00,382.00 L 116.00,407.00 L 151.00,418.00 L 134.00,393.00 L 122.00,354.00 L 111.00,334.00 L 87.00,310.00 L 57.00,296.00 L 65.00,296.00 L 83.00,304.00 L 115.00,332.00 L 125.00,348.00 L 135.00,381.00 L 149.00,408.00 L 169.00,428.00 L 193.00,442.00 L 177.00,403.00 L 174.00,366.00 L 167.00,345.00 L 154.00,320.00 L 108.00,255.00 L 97.00,227.00 L 92.00,198.00 L 94.00,184.00 L 98.00,216.00 L 108.00,245.00 L 160.00,320.00 L 178.00,360.00 L 180.00,320.00 L 161.00,248.00 L 163.00,210.00 L 176.00,166.00 L 167.00,213.00 L 166.00,246.00 L 186.00,323.00 L 181.00,391.00 L 186.00,412.00 L 210.00,458.00 L 214.00,474.00 L 217.00,450.00 L 209.00,401.00 L 219.00,350.00 L 218.00,282.00 L 229.00,238.00 L 229.00,221.00 L 222.00,193.00 L 222.00,171.00 L 236.00,122.00 L 260.00,84.00 L 236.00,134.00 L 227.00,174.00 L 228.00,194.00 L 235.00,220.00 L 235.00,240.00 L 224.00,283.00 L 225.00,351.00 L 216.00,390.00 L 216.00,416.00 L 223.00,445.00 L 223.00,464.00 L 217.00,496.00 L 229.00,461.00 L 228.00,412.00 L 237.00,388.00 L 267.00,346.00 L 292.00,284.00 L 332.00,238.00 L 353.00,180.00 L 407.00,121.00 L 433.00,73.00 L 426.00,97.00 L 410.00,126.00 L 359.00,182.00 L 337.00,242.00 L 300.00,284.00 L 282.00,330.00 L 307.00,304.00 L 333.00,283.00 L 414.00,236.00 L 432.00,222.00 L 465.00,183.00 L 489.00,135.00 L 504.00,113.00 L 531.00,85.00 L 546.00,74.00 L 548.00,75.00 L 509.00,115.00 L 463.00,198.00 L 433.00,229.00 L 481.00,208.00 L 526.00,173.00 L 545.00,163.00 L 564.00,158.00 L 615.00,158.00 L 651.00,153.00 L 697.00,134.00 L 735.00,123.00 L 750.00,115.00 L 765.00,99.00 L 763.00,106.00 L 742.00,124.00 L 698.00,139.00 L 660.00,156.00 L 698.00,161.00 L 725.00,161.00 L 767.00,154.00 L 764.00,156.00 L 718.00,166.00 L 693.00,166.00 L 649.00,160.00 L 621.00,164.00 L 560.00,166.00 L 528.00,180.00 L 499.00,204.00 L 471.00,220.00 L 522.00,222.00 L 583.00,237.00 L 609.00,235.00 L 653.00,225.00 L 673.00,226.00 L 702.00,238.00 L 729.00,261.00 L 747.00,269.00 L 766.00,273.00 L 798.00,272.00 L 838.00,254.00 L 863.00,250.00 L 867.00,252.00 L 837.00,258.00 L 809.00,273.00 L 791.00,278.00 L 765.00,278.00 L 738.00,271.00 L 764.00,298.00 L 801.00,313.00 L 820.00,334.00 L 830.00,339.00 L 846.00,339.00 L 865.00,330.00 L 885.00,325.00 L 908.00,327.00 L 876.00,330.00 L 843.00,344.00 L 821.00,341.00 L 832.00,357.00 L 851.00,375.00 L 874.00,387.00 L 906.00,398.00 L 921.00,406.00 L 923.00,410.00 L 901.00,399.00 L 867.00,388.00 L 847.00,377.00 L 827.00,358.00 L 801.00,319.00 L 762.00,303.00 L 723.00,262.00 L 688.00,237.00 L 673.00,232.00 L 654.00,231.00 L 606.00,242.00 L 578.00,243.00 L 577.00,242.00 L 568.00,241.00 L 557.00,237.00 L 554.00,237.00 L 550.00,235.00 L 547.00,235.00 L 543.00,233.00 L 540.00,233.00 L 539.00,232.00 L 536.00,232.00 L 535.00,231.00 L 533.00,231.00 L 573.00,262.00 L 616.00,272.00 L 636.00,281.00 L 653.00,299.00 L 672.00,333.00 L 693.00,350.00 L 739.00,362.00 L 759.00,376.00 L 766.00,391.00 L 765.00,396.00 L 759.00,381.00 L 747.00,369.00 L 707.00,359.00 L 720.00,377.00 L 732.00,422.00 L 752.00,456.00 L 756.00,472.00 L 754.00,475.00 L 749.00,455.00 L 726.00,416.00 L 713.00,372.00 L 703.00,361.00 L 681.00,348.00 L 667.00,335.00 L 649.00,303.00 L 636.00,288.00 L 619.00,279.00 L 586.00,273.00 L 567.00,266.00 L 519.00,229.00 L 497.00,226.00 L 464.00,227.00 L 415.00,246.00 L 348.00,284.00 L 408.00,286.00 L 458.00,269.00 L 484.00,272.00 L 496.00,279.00 L 509.00,292.00 L 536.00,342.00 L 547.00,355.00 L 589.00,373.00 L 607.00,384.00 L 657.00,438.00 L 642.00,428.00 L 602.00,385.00 L 555.00,365.00 L 572.00,390.00 L 586.00,436.00 L 599.00,462.00 L 586.00,444.00 L 566.00,388.00 L 533.00,348.00 L 507.00,300.00 L 489.00,282.00 L 468.00,275.00 L 453.00,277.00 L 407.00,293.00 L 351.00,291.00 L 330.00,297.00 L 292.00,331.00 L 262.00,367.00 L 247.00,390.00 L 238.00,410.00 L 237.00,415.00 L 237.00,430.00 L 255.00,407.00 L 300.00,385.00 L 336.00,362.00 L 359.00,353.00 L 388.00,351.00 L 412.00,359.00 L 449.00,387.00 L 470.00,399.00 L 514.00,407.00 L 490.00,408.00 L 467.00,402.00 L 449.00,392.00 L 415.00,366.00 L 397.00,358.00 L 373.00,356.00 L 351.00,361.00 L 325.00,375.00 L 346.00,374.00 L 366.00,381.00 L 409.00,425.00 L 456.00,448.00 L 407.00,429.00 L 364.00,386.00 L 343.00,379.00 L 325.00,380.00 L 264.00,408.00 L 250.00,420.00 L 238.00,443.00 L 238.00,463.00 L 231.00,489.00 L 242.00,487.00 L 270.00,495.00 L 287.00,495.00 L 338.00,474.00 L 392.00,478.00 L 420.00,469.00 L 402.00,479.00 L 390.00,482.00 L 339.00,479.00 L 303.00,496.00 L 285.00,501.00 L 269.00,501.00 L 247.00,494.00 L 234.00,494.00 L 229.00,499.00 L 229.00,510.00 L 239.00,532.00 L 251.00,544.00 L 283.00,566.00 L 360.00,567.00 L 376.00,564.00 L 391.00,557.00 L 434.00,515.00 L 456.00,505.00 L 434.00,519.00 L 402.00,555.00 L 380.00,568.00 L 363.00,572.00 L 311.00,570.00 L 288.00,572.00 L 298.00,588.00 L 314.00,629.00 L 326.00,647.00 L 360.00,679.00 L 384.00,691.00 L 414.00,690.00 L 445.00,676.00 L 461.00,659.00 L 484.00,613.00 L 500.00,599.00 L 525.00,588.00 L 491.00,611.00 L 462.00,667.00 L 446.00,682.00 L 428.00,692.00 L 469.00,699.00 L 503.00,694.00 L 515.00,687.00 L 554.00,644.00 L 596.00,614.00 L 605.00,601.00 L 611.00,584.00 L 612.00,589.00 L 607.00,603.00 L 596.00,619.00 L 557.00,647.00 L 521.00,689.00 L 503.00,700.00 L 486.00,704.00 L 461.00,704.00 L 427.00,697.00 L 388.00,698.00 L 369.00,693.00 L 388.00,723.00 L 409.00,741.00 L 460.00,762.00 L 490.00,779.00 L 512.00,784.00 L 577.00,756.00 L 593.00,742.00 L 602.00,722.00 L 606.00,688.00 L 615.00,673.00 L 628.00,661.00 L 610.00,687.00 L 605.00,729.00 L 594.00,749.00 L 574.00,764.00 L 514.00,790.00 L 547.00,801.00 L 580.00,800.00 L 604.00,791.00 L 654.00,749.00 L 674.00,724.00 L 696.00,665.00 L 697.00,626.00 L 707.00,590.00 L 703.00,545.00 L 706.00,522.00 L 711.00,592.00 L 703.00,622.00 L 703.00,656.00 L 700.00,670.00 L 723.00,644.00 L 769.00,611.00 L 779.00,594.00 L 795.00,542.00 L 808.00,527.00 L 836.00,505.00 L 856.00,471.00 L 880.00,454.00 L 905.00,449.00 L 886.00,455.00 L 866.00,467.00 L 855.00,480.00 L 837.00,512.00 L 805.00,538.00 L 796.00,553.00 L 784.00,597.00 L 776.00,611.00 L 762.00,625.00 L 731.00,645.00 L 714.00,661.00 L 700.00,681.00 L 675.00,735.00 L 659.00,753.00 L 618.00,789.00 L 588.00,805.00 L 549.00,808.00 L 527.00,803.00 L 492.00,788.00 L 519.00,822.00 L 536.00,831.00 L 557.00,836.00 L 601.00,835.00 L 647.00,819.00 L 676.00,803.00 L 711.00,773.00 L 751.00,749.00 L 766.00,731.00 L 791.00,678.00 L 804.00,665.00 L 838.00,642.00 L 856.00,623.00 L 894.00,554.00 L 922.00,530.00 L 968.00,505.00 L 917.00,538.00 L 900.00,554.00 L 888.00,571.00 L 861.00,625.00 L 835.00,652.00 L 796.00,681.00 L 770.00,736.00 L 757.00,752.00 L 793.00,739.00 L 830.00,712.00 L 856.00,699.00 L 876.00,695.00 L 917.00,694.00 L 939.00,685.00 L 960.00,668.00 L 957.00,674.00 L 939.00,689.00 L 921.00,697.00 L 876.00,700.00 L 850.00,707.00 L 795.00,745.00 L 781.00,752.00 L 747.00,761.00 L 725.00,772.00 L 707.00,784.00 L 686.00,803.00 L 685.00,803.00 L 682.00,806.00 L 681.00,806.00 L 675.00,811.00 L 672.00,812.00 L 671.00,813.00 L 684.00,810.00 L 721.00,812.00 L 771.00,832.00 L 801.00,840.00 L 826.00,840.00 L 845.00,834.00 L 847.00,836.00 L 827.00,843.00 L 798.00,844.00 L 776.00,839.00 L 723.00,818.00 L 693.00,815.00 L 663.00,820.00 L 600.00,842.00 L 558.00,843.00 L 544.00,840.00 L 581.00,865.00 L 603.00,876.00 L 624.00,881.00 L 665.00,882.00 L 684.00,887.00 L 742.00,929.00 L 727.00,923.00 L 682.00,891.00 L 664.00,887.00 L 616.00,886.00 L 582.00,873.00 L 518.00,830.00 L 474.00,780.00 L 455.00,769.00 L 421.00,757.00 L 395.00,742.00 L 376.00,722.00 L 348.00,679.00 L 313.00,644.00 L 281.00,578.00 L 270.00,567.00 L 242.00,548.00 L 230.00,535.00 L 223.00,522.00 L 227.00,566.00 L 234.00,587.00 L 252.00,613.00 L 302.00,667.00 L 311.00,684.00 L 324.00,722.00 L 334.00,739.00 L 347.00,753.00 L 366.00,766.00 L 416.00,785.00 L 432.00,794.00 L 453.00,819.00 L 482.00,881.00 L 494.00,893.00 L 537.00,918.00 L 554.00,937.00 L 558.00,952.00" class="blood-vessel" />
+  
+    <!-- Pequeños detalles -->
+    <path d="M 549.00,75.00 L 547.00,74.00 L 550.00,72.00 L 551.00,73.00 L 549.00,75.00" class="small-details" />
+    <path d="M 262.00,84.00 L 261.00,83.00 L 262.00,82.00 L 263.00,83.00 L 262.00,84.00" class="small-details" />
+    <path d="M 261.00,85.00 L 260.00,84.00 L 261.00,83.00 L 262.00,84.00 L 261.00,85.00" class="small-details" />
+    <path d="M 766.00,100.00 L 765.00,99.00 L 766.00,97.00 L 767.00,98.00 L 766.00,100.00" class="small-details" />
+    <path d="M 927.00,413.00 L 926.00,413.00 L 923.00,410.00 L 925.00,409.00 L 927.00,413.00" class="small-details" />
+    <path d="M 929.00,415.00 L 927.00,413.00 L 928.00,412.00 L 930.00,413.00 L 929.00,415.00" class="small-details" />
+    <path d="M 659.00,439.00 L 658.00,439.00 L 657.00,438.00 L 659.00,437.00 L 659.00,439.00" class="small-details" />
+    <path d="M 600.00,463.00 L 599.00,462.00 L 600.00,461.00 L 601.00,462.00 L 600.00,463.00" class="small-details" />
+    <path d="M 420.00,469.00 L 419.00,468.00 L 420.00,467.00 L 421.00,468.00 L 420.00,469.00" class="small-details" />
+    <path d="M 526.00,589.00 L 525.00,588.00 L 526.00,587.00 L 527.00,588.00 L 526.00,589.00" class="small-details" />
+    <path d="M 629.00,662.00 L 628.00,661.00 L 629.00,660.00 L 630.00,661.00 L 629.00,662.00" class="small-details" />
+    <path d="M 99.00,738.00 L 96.00,737.00 L 102.00,736.00 L 100.00,737.00 L 99.00,738.00" class="small-details" />
+    <path d="M 848.00,835.00 L 847.00,834.00 L 848.00,833.00 L 849.00,834.00 L 848.00,835.00" class="small-details" />
+    <path d="M 542.00,839.00 L 542.00,839.00 L 542.00,839.00 L 542.00,839.00 L 542.00,839.00" class="small-details" />
+  </svg>
+</div>
+      <!-- Instrumento único completo (reemplazo de todos los instrumentos) -->
+<div class="instrument-container">
+  <!-- Sombras -->
+  <div class="instrument-base-shadow"></div>
+  <div class="instrument-rod-shadow"></div>
+  <div class="instrument-tip-shadow"></div>
+  
+  <!-- Instrumento real -->
+  <div id="instrument-base" class="instrument-base"></div>
+  <div id="instrument-rod" class="instrument-rod"></div>
+  <div id="instrument-tip" class="instrument-tip"></div>
+  <div id="instrument-action-indicator" class="instrument-action-indicator">Vitrectomía</div>
+</div>
+        <!-- Burbujas de PFC -->
+        <div id="pfc-bubbles"></div>
+        
+        <!-- Burbujas de Gas -->
+        <div id="gas-bubbles"></div>
+        
+        <!-- Coágulos de sangre -->
+        <div id="blood-clots"></div>
+        
+        <!-- Marcas permanentes de láser y cauterio -->
+        <div id="permanent-marks"></div>
+      </div>
+    </div>
+
+    
+  <script>
+/* ================== VARIABLES GLOBALES ================== */
+let lightJoystickX = 50, lightJoystickY = 50;
+let vitrectomoJoystickX = 50, vitrectomoJoystickY = 50;
+let currentDepth = parseInt(document.getElementById('vitrectomo-z-slider').value);
+let activeInstrument = null;
+let iop = 16; // mmHg
+let perfusion = 95; // %
+let vitreousRemoved = 0; // %
+let pfcLevel = 0; // %
+let gasLevel = 0; // %
+let bloodClots = [];
+let laserBurns = [];
+let cauteryMarks = [];
+let hemorrhageActive = false;
+let wallCollisionActive = false;
+let retinaDetached = false;
+let retinaFixed = false;
+let pfcInjected = false;
+let gasInjected = false;
+let procedureStep = 0; // 0: no iniciado, 1: vitrectomía, 2: localización agujero, 3: inyección PFC, 4: burbujeo, 5: láser, 6: remoción PFC, 7: inyección gas
+let holeLocated = false;
+let isTouchingLight = false;
+let isTouchingVitrectomo = false;
+let requiredMarks = 7; // Cambiado a 7 puntos como solicitaste
+let marksAroundHole = 0;
+let lastLightX = 50, lastLightY = 50;
+let lastVitrectomoX = 50, lastVitrectomoY = 50;
+let joystickSensitivity = 0.7; // Factor de sensibilidad para los joysticks (0.5-1.0)
+let activeTouchId = null; // Para manejar multitouch
+let isActionButtonPressed = false;
+let vitrectomyInterval = null;
+
+/* ================== INICIALIZACIÓN ================== */
+document.addEventListener('DOMContentLoaded', function() {
+  // Mostrar caso clínico al inicio
+  document.getElementById('start-simulation-btn').addEventListener('click', function() {
+    gsap.to('#clinical-case', {
+      opacity: 0,
+      duration: 0.5,
+      onComplete: () => {
+        document.getElementById('clinical-case').style.display = 'none';
+        initSimulation();
+      }
+    });
+  });
+  
+  // Botón para volver al menú
+  document.getElementById('back-to-menu-btn').addEventListener('click', function() {
+    location.reload();
+  });
+});
+
+function initSimulation() {
+  // Configurar el instrumento único
+  setupSingleInstrument();
+  
+  initJoysticks();
+  setupEventListeners();
+  setupAlertDismissButtons();
+  updateVitals();
+  updateEndoLightEffect(50, 50);
+  
+  requestAnimationFrame(updateInstrumentPositions);
+}
+function setupSingleInstrument() {
+  const retina = document.getElementById('retina');
+  const retinaRect = retina.getBoundingClientRect();
+  
+  // Configurar la base del instrumento (fija en la parte inferior derecha)
+  const base = document.getElementById('instrument-base');
+  const baseX = retinaRect.width * 0.85 - 15;
+  const baseY = retinaRect.height * 0.85 - 15;
+  base.style.left = baseX + 'px';
+  base.style.top = baseY + 'px';
+  
+  // Configurar la sombra de la base
+  const baseShadow = document.querySelector('.instrument-base-shadow');
+  baseShadow.style.left = baseX + 'px';
+  baseShadow.style.top = baseY + 'px';
+  
+  // Configurar la punta del instrumento (inicialmente en el centro)
+  const tip = document.getElementById('instrument-tip');
+  const tipX = retinaRect.width / 2;
+  const tipY = retinaRect.height / 2;
+  tip.style.left = tipX + 'px';
+  tip.style.top = tipY + 'px';
+  
+  // Configurar la sombra de la punta
+  const tipShadow = document.querySelector('.instrument-tip-shadow');
+  tipShadow.style.left = tipX + 50 + 'px'; // Offset inicial
+  tipShadow.style.top = tipY - 50 + 'px';
+  
+  // Actualizar el palo para que conecte base y punta
+  updateInstrumentRod(tipX, tipY, baseX + 15, baseY + 15, tipX + 50, tipY - 50);
+}
+
+function updateInstrumentRod(tipX, tipY, baseX, baseY, shadowX, shadowY) {
+  const retina = document.getElementById('retina');
+  const retinaRect = retina.getBoundingClientRect();
+  const rod = document.getElementById('instrument-rod');
+  const rodShadow = document.querySelector('.instrument-rod-shadow');
+  
+  // Calcular longitud y ángulo del palo real
+  const dx = tipX - baseX;
+  const dy = tipY - baseY;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+  
+  // Calcular sombra del palo
+  const shadowOriginX = retinaRect.width * 1.1;
+  const shadowOriginY = retinaRect.height * 0.7;
+  
+  const shadowDx = shadowX - shadowOriginX;
+  const shadowDy = shadowY - shadowOriginY;
+  const shadowLength = Math.sqrt(shadowDx * shadowDx + shadowDy * shadowDy);
+  const shadowAngle = Math.atan2(shadowDy, shadowDx) * (180 / Math.PI);
+  
+  // Posicionar y rotar el palo real
+  rod.style.width = length + 'px';
+  rod.style.left = baseX + 'px';
+  rod.style.top = baseY + 'px';
+  rod.style.transform = `rotate(${angle}deg)`;
+  
+  // Posicionar y rotar la sombra del palo
+  rodShadow.style.width = shadowLength + 'px';
+  rodShadow.style.left = shadowOriginX + 'px';
+  rodShadow.style.top = shadowOriginY + 'px';
+  rodShadow.style.transform = `rotate(${shadowAngle}deg)`;
+}
+
+/* ================== SISTEMA DE ALERTAS ================== */
+function setupAlertDismissButtons() {
+  document.querySelectorAll('.alert-dismiss').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const alert = this.parentElement;
+      gsap.to(alert, {
+        opacity: 0,
+        y: -20,
+        duration: 0.3,
+        ease: "power1.out",
+        onComplete: () => {
+          alert.style.display = 'none';
+          alert.style.opacity = '1';
+          alert.style.transform = 'translateY(0)';
+          if(alert.id === 'wall-collision-alert') {
+            wallCollisionActive = false;
+          }
+        }
+      });
+    });
+  });
+}
+
+function showAlert(alertId, duration = 5000) {
+  const alert = document.getElementById(alertId);
+  if (!alert) return;
+  
+  alert.style.display = 'flex';
+  gsap.fromTo(alert, 
+    { opacity: 0, y: -20 }, 
+    { opacity: 1, y: 0, duration: 0.3, ease: "power1.out" }
+  );
+  
+  const timer = alert.querySelector('.alert-timer');
+  if (timer) {
+    timer.style.width = '100%';
+    timer.style.transition = `width ${duration/1000}s linear`;
+    setTimeout(() => {
+      timer.style.width = '0%';
+    }, 10);
+  }
+  
+  if (duration > 0) {
+    setTimeout(() => {
+      gsap.to(alert, {
+        opacity: 0,
+        y: -20,
+        duration: 0.3,
+        ease: "power1.out",
+        onComplete: () => {
+          alert.style.display = 'none';
+          alert.style.opacity = '1';
+          alert.style.transform = 'translateY(0)';
+          if(alertId === 'wall-collision-alert') {
+            wallCollisionActive = false;
+          }
+        }
+      });
+    }, duration);
+  }
+  
+  if(alertId === 'wall-collision-alert') {
+    wallCollisionActive = true;
+  }
+}
+
+function checkWallCollision() {
+  const miniMapRect = document.getElementById('miniMapContainer').getBoundingClientRect();
+  const retinaRect = document.getElementById('retina').getBoundingClientRect();
+  
+  // Verificar colisión para la punta del instrumento
+  const tip = document.getElementById('instrument-tip');
+  const tipRect = tip.getBoundingClientRect();
+  const tipCenterX = tipRect.left + tipRect.width/2;
+  const tipCenterY = tipRect.top + tipRect.height/2;
+  
+  // Coordenadas relativas al mini mapa
+  const relX = (tipCenterX - retinaRect.left) / retinaRect.width * miniMapRect.width;
+  const relY = (tipCenterY - retinaRect.top) / retinaRect.height * miniMapRect.height;
+  
+  // Verificar contacto con retina en mini mapa
+  const retinaWall = document.getElementById('retina-wall');
+  const retinaX = 400 * (miniMapRect.width / 800);
+  const retinaY = 300 * (miniMapRect.height / 600);
+  const retinaRadius = 250 * (miniMapRect.width / 800);
+  
+  const distance = Math.sqrt(Math.pow(relX - retinaX, 2) + Math.pow(relY - retinaY, 2));
+  
+  // Solo mostrar alerta si estamos en el borde (90% del radio)
+  if (distance > retinaRadius * 1.1 && !wallCollisionActive) {
+    showAlert('wall-collision-alert');
+    return true;
+  }
+  
+  // Verificar colisión para el endoiluminador
+  const lightPosX = retinaRect.left + retinaRect.width * lightJoystickX / 100;
+  const lightPosY = retinaRect.top + retinaRect.height * lightJoystickY / 100;
+  
+  // Coordenadas relativas al mini mapa
+  const lightRelX = (lightPosX - retinaRect.left) / retinaRect.width * miniMapRect.width;
+  const lightRelY = (lightPosY - retinaRect.top) / retinaRect.height * miniMapRect.height;
+  
+  // Verificar contacto con retina para el endoiluminador
+  const lightDistance = Math.sqrt(Math.pow(lightRelX - retinaX, 2) + Math.pow(lightRelY - retinaY, 2));
+  
+  if (lightDistance > retinaRadius * 1.1 && !wallCollisionActive) {
+    showAlert('wall-collision-alert');
+    return true;
+  }
+  
+  return false;
+}
+
+function checkVesselDamage() {
+  if (currentDepth > -200 || hemorrhageActive) return false;
+  
+  const retinaRect = document.getElementById('retina').getBoundingClientRect();
+  const tip = document.getElementById('instrument-tip');
+  const tipRect = tip.getBoundingClientRect();
+  
+  const tipCenterX = tipRect.left + tipRect.width/2;
+  const tipCenterY = tipRect.top + tipRect.height/2;
+  
+  const bloodVessels = document.querySelector('.blood-vessels');
+  const bloodVesselsRect = bloodVessels.getBoundingClientRect();
+  
+  const relX = tipCenterX - bloodVesselsRect.left;
+  const relY = tipCenterY - bloodVesselsRect.top;
+  
+  const proximityThreshold = 30;
+  const vesselProximity = Math.abs(relX - bloodVesselsRect.width/2) < proximityThreshold && 
+                        Math.abs(relY - bloodVesselsRect.height/2) < proximityThreshold;
+  
+  if (vesselProximity && !hemorrhageActive) {
+    hemorrhageActive = true;
+    showAlert('vessel-damage-alert', 0);
+    
+    document.getElementById('hemorrhage-effect').style.display = 'block';
+    gsap.to('#hemorrhage-effect', { opacity: 0.7, duration: 1 });
+    
+    createBloodClots(5, {x: tipCenterX, y: tipCenterY});
+    
+    perfusion -= 15;
+    iop += 5;
+    
+    return true;
+  }
+  return false;
+}
+
+function createBloodClots(count, position = null) {
+  const retinaRect = document.getElementById('retina').getBoundingClientRect();
+  const bloodClotsContainer = document.getElementById('blood-clots');
+  
+  for (let i = 0; i < count; i++) {
+    const clot = document.createElement('div');
+    clot.className = 'blood-clot';
+    
+    let x, y;
+    if (position) {
+      x = position.x - retinaRect.left + (Math.random() * 40 - 20);
+      y = position.y - retinaRect.top + (Math.random() * 40 - 20);
+    } else {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * retinaRect.width * 0.4;
+      x = retinaRect.width/2 + Math.cos(angle) * distance;
+      y = retinaRect.height/2 + Math.sin(angle) * distance;
+    }
+    
+    clot.style.left = `${x}px`;
+    clot.style.top = `${y}px`;
+    clot.style.width = `${10 + Math.random() * 20}px`;
+    clot.style.height = clot.style.width;
+    
+    bloodClotsContainer.appendChild(clot);
+    bloodClots.push({
+      element: clot,
+      x: x,
+      y: y,
+      size: parseFloat(clot.style.width)
+    });
+  }
+}
+
+function removeBloodClot(index) {
+  if (index >= 0 && index < bloodClots.length) {
+    const clot = bloodClots[index];
+    if (clot.element.parentNode) {
+      gsap.to(clot.element, {
+        opacity: 0,
+        scale: 0.5,
+        duration: 0.5,
+        onComplete: () => {
+          if (clot.element.parentNode) {
+            clot.element.parentNode.removeChild(clot.element);
+          }
+        }
+      });
+    }
+    bloodClots.splice(index, 1);
+    
+    if (bloodClots.length === 0) {
+      hemorrhageActive = false;
+      gsap.to('#hemorrhage-effect', { 
+        opacity: 0, 
+        duration: 1, 
+        onComplete: () => {
+          document.getElementById('hemorrhage-effect').style.display = 'none';
+        }
+      });
+    }
+  }
+}
+
+function removeNearbyBloodClots() {
+  const retinaRect = document.getElementById('retina').getBoundingClientRect();
+  const tip = document.getElementById('instrument-tip');
+  const tipRect = tip.getBoundingClientRect();
+  
+  // Calcular posición central de la punta relativa a la retina
+  const tipCenterX = tipRect.left - retinaRect.left + tipRect.width/2;
+  const tipCenterY = tipRect.top - retinaRect.top + tipRect.height/2;
+  
+  bloodClots.forEach((clot, index) => {
+    const dx = tipCenterX - clot.x;
+    const dy = tipCenterY - clot.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance < clot.size + tipRect.width/2) {
+      removeBloodClot(index);
+      
+      const particleCount = 5 + Math.floor(Math.random() * 5);
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'vitreous-particle';
+        particle.style.left = `${clot.x + (Math.random()*20 - 10)}px`;
+        particle.style.top = `${clot.y + (Math.random()*20 - 10)}px`;
+        particle.style.setProperty('--tx', Math.random()*40 - 20);
+        particle.style.setProperty('--ty', Math.random()*40 - 20);
+        document.getElementById('retina').appendChild(particle);
+        
+        setTimeout(() => particle.remove(), 1500);
+      }
+    }
+  });
+}
+
+function checkRetinaDetachment() {
+  if (iop > 28 && !retinaDetached) {
+    showAlert('retina-detachment-alert');
+    retinaDetached = true;
+    simulateRetinaDetachment();
+    return true;
+  }
+  return false;
+}
+
+function checkHighIOP() {
+  if (iop > 25) {
+    showAlert('high-iop-alert', 0);
+    document.querySelector('.retina-nerve').style.backgroundColor = 'rgba(255,255,255,0.8)';
+    document.querySelector('.optic-disc').style.boxShadow = 'inset 0 0 20px rgba(255,255,255,0.6), 0 0 25px rgba(255,255,255,0.5)';
+    return true;
+  } else {
+    document.querySelector('.retina-nerve').style.backgroundColor = '';
+    document.querySelector('.optic-disc').style.boxShadow = 'inset 0 0 20px rgba(220,80,80,0.6), 0 0 25px rgba(220,80,80,0.5)';
+    document.getElementById('high-iop-alert').style.display = 'none';
+    return false;
+  }
+}
+
+/* ================== SIMULACIÓN DE DESPRENDIMIENTO DE RETINA ================== */
+function simulateRetinaDetachment() {
+  const overlay = document.getElementById('detached-retina-overlay');
+  overlay.style.position = 'absolute';
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+  overlay.style.borderRadius = '50%';
+  overlay.style.background = 'radial-gradient(circle at 30% 20%, rgba(200,0,0,0.7) 0%, rgba(100,0,0,0.5) 60%, transparent 100%)';
+  overlay.style.zIndex = '13';
+  overlay.style.pointerEvents = 'none';
+  
+  // Crear bolsa de desprendimiento en la parte superior izquierda
+  const edgeDetachment = document.getElementById('retina-edge-detachment');
+  edgeDetachment.style.position = 'absolute';
+  edgeDetachment.style.width = '60%';
+  edgeDetachment.style.height = '60%';
+  edgeDetachment.style.left = '10%';
+  edgeDetachment.style.top = '10%';
+  edgeDetachment.style.borderRadius = '50%';
+  edgeDetachment.style.background = 'radial-gradient(circle, transparent 65%, rgba(180,0,0,0.5) 85%, rgba(150,0,0,0.7) 100%)';
+  edgeDetachment.style.zIndex = '14';
+  edgeDetachment.style.pointerEvents = 'none';
+  edgeDetachment.style.boxShadow = 'inset 0 0 50px rgba(0,0,0,0.5)';
+  edgeDetachment.style.transform = 'rotate(-15deg)';
+  edgeDetachment.style.filter = 'url(#wrinkleFilter)';
+  
+  // Crear agujero retiniano pequeño en la parte superior
+  const hole = document.getElementById('retinal-hole');
+  hole.style.position = 'absolute';
+  hole.style.width = '30px';
+  hole.style.height = '30px';
+  hole.style.left = '25%';
+  hole.style.top = '25%';
+  hole.style.borderRadius = '50%';
+  hole.style.background = 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(200,0,0,0.6) 70%, transparent 100%)';
+  hole.style.zIndex = '15';
+  hole.style.pointerEvents = 'none';
+  hole.style.boxShadow = '0 0 15px rgba(255,255,255,0.5)';
+  hole.style.border = '2px dashed rgba(255,255,255,0.7)';
+  hole.style.display = 'block';
+  
+  // Crear efecto de desprendimiento central
+  const retina = document.querySelector('.retina-sphere');
+  retina.style.transform = 'rotateX(15deg) translateZ(50px) scale(1.05)';
+  
+  // Crear burbujas subretinianas
+  for (let i = 0; i < 15; i++) {
+    setTimeout(() => {
+      const bubble = document.createElement('div');
+      bubble.className = 'subretinal-bubble';
+      bubble.style.left = `${10 + Math.random() * 30}%`;
+      bubble.style.top = `${10 + Math.random() * 30}%`;
+      bubble.style.width = `${10 + Math.random() * 30}px`;
+      bubble.style.height = bubble.style.width;
+      overlay.appendChild(bubble);
+      
+      gsap.to(bubble, {
+        y: `-=${10 + Math.random() * 20}`,
+        x: `+=${Math.random() * 20 - 10}`,
+        opacity: 0.7,
+        duration: 3,
+        onComplete: () => bubble.remove()
+      });
+    }, i * 300);
+  }
+}
+
+function simulateRetinaDetachmentProcedure() {
+  if (retinaDetached) return;
+  
+  procedureStep = 1;
+  showAlert('retina-detachment-alert');
+  
+  // Simular aumento rápido de PIO
+  iop = 30;
+  showAlert('high-iop-alert');
+  
+  // Simular desprendimiento
+  setTimeout(() => {
+    simulateRetinaDetachment();
+    retinaDetached = true;
+    
+    // Guiar al usuario a usar el vitrectomo
+    setTimeout(() => {
+      document.getElementById('btn-vitrectomo').classList.add('active');
+      activeInstrument = 'vitrectomo';
+      updateInstrumentTipAppearance();
+    }, 1000);
+  }, 1000);
+}
+
+function injectPFCForDetachment() {
+  if (pfcInjected) return;
+  
+  pfcInjected = true;
+  procedureStep = 3;
+  const overlay = document.getElementById('detached-retina-overlay');
+  const edgeDetachment = document.getElementById('retina-edge-detachment');
+  
+  // Eliminar la bolsa de desprendimiento
+  gsap.to(edgeDetachment, {
+    opacity: 0,
+    duration: 1.5,
+    onComplete: () => {
+      edgeDetachment.style.display = 'none';
+    }
+  });
+  
+  // Cambiar color del overlay para simular PFC
+  overlay.style.background = 'radial-gradient(circle at 30% 20%, rgba(100,255,255,0.3) 0%, rgba(50,200,200,0.2) 60%, transparent 100%)';
+  
+  // Crear burbujas de PFC
+  for (let i = 0; i < 30; i++) {
+    setTimeout(() => {
+      const bubble = document.createElement('div');
+      bubble.className = 'pfc-bubble';
+      bubble.style.left = `${30 + Math.random() * 40}%`;
+      bubble.style.top = `${70 + Math.random() * 20}%`;
+      bubble.style.width = `${10 + Math.random() * 30}px`;
+      bubble.style.height = bubble.style.width;
+      document.getElementById('pfc-bubbles').appendChild(bubble);
+      
+      gsap.to(bubble, {
+        y: `-=${50 + Math.random() * 50}`,
+        x: `+=${Math.random() * 40 - 20}`,
+        opacity: 0.8,
+        duration: 2,
+        onComplete: () => bubble.remove()
+      });
+    }, i * 100);
+  }
+  
+  // Reposicionar retina
+  setTimeout(() => {
+    const retina = document.querySelector('.retina-sphere');
+    retina.style.transform = 'rotateX(15deg) translateZ(50px) scale(1)';
+    
+    // Eliminar burbujas subretinianas
+    const bubbles = overlay.querySelectorAll('.subretinal-bubble');
+    bubbles.forEach(bubble => bubble.remove());
+    
+    // Guiar al usuario a usar el láser
+    setTimeout(() => {
+      document.getElementById('btn-cautery').classList.add('active');
+      activeInstrument = 'cautery';
+      updateInstrumentTipAppearance();
+      procedureStep = 4;
+    }, 2000);
+  }, 2000);
+  
+  pfcLevel = 100;
+  document.getElementById('pfc-value').textContent = `${pfcLevel}%`;
+  document.getElementById('pfc-level').style.width = `${pfcLevel}%`;
+  
+  iop += 10;
+  perfusion += 5;
+}
+
+function injectGas() {
+  if (gasLevel >= 100) return;
+  
+  const retina = document.getElementById('retina');
+  const gasBubbles = document.getElementById('gas-bubbles');
+  
+  // Crear burbuja grande central
+  if (gasLevel === 0) {
+    const bigBubble = document.createElement('div');
+    bigBubble.className = 'gas-bubble-large';
+    bigBubble.style.left = '50%';
+    bigBubble.style.top = '50%';
+    bigBubble.style.width = '40%';
+    bigBubble.style.height = '40%';
+    bigBubble.style.zIndex = '5';
+    gasBubbles.appendChild(bigBubble);
+    
+    gsap.to(bigBubble, {
+      scale: 1.2,
+      opacity: 0.9,
+      duration: 3,
+      onComplete: () => {
+        if (bigBubble.parentNode) {
+          bigBubble.parentNode.removeChild(bigBubble);
+        }
+      }
+    });
+  }
+  
+  // Crear múltiples burbujas de gas transparentes con bordes grises claros
+  for (let i = 0; i < 25; i++) { // Más burbujas para cubrir el 85% de la retina
+    setTimeout(() => {
+      const bubble = document.createElement('div');
+      bubble.className = 'gas-bubble';
+      
+      // Tamaños aleatorios (grandes y pequeñas)
+      const size = 15 + Math.random() * 40; // Tamaños entre 15px y 55px
+      
+      bubble.style.left = `${30 + Math.random() * 40}%`; // Cubrir área central del 85%
+      bubble.style.top = `${30 + Math.random() * 40}%`;
+      bubble.style.width = `${size}px`;
+      bubble.style.height = `${size}px`;
+      
+      // Estilo de burbuja transparente con borde gris claro
+      bubble.style.background = 'rgba(255, 255, 255, 0.1)';
+      bubble.style.border = '1px solid rgba(200, 200, 200, 0.6)';
+      bubble.style.boxShadow = 
+        '0 0 10px rgba(255, 255, 255, 0.5), ' +
+        'inset 0 0 5px rgba(255, 255, 255, 0.3)';
+      
+      bubble.style.setProperty('--tx', Math.random() * 40 - 20);
+      bubble.style.setProperty('--ty', -Math.random() * 60 - 30);
+      gasBubbles.appendChild(bubble);
+      
+      // Animación de flotación
+      gsap.to(bubble, {
+        y: `-=${20 + Math.random() * 30}`,
+        x: `+=${Math.random() * 20 - 10}`,
+        scale: 1.2,
+        opacity: 0.8,
+        duration: 3,
+        onComplete: () => bubble.remove()
+      });
+    }, i * 120); // Más rápido para crear más burbujas
+  }
+  
+  gasLevel = Math.min(100, gasLevel + 20);
+  document.getElementById('gas-value').textContent = `${gasLevel}%`;
+  document.getElementById('gas-level').style.width = `${gasLevel}%`;
+  
+  iop += 5;
+  perfusion -= 2;
+  
+  if (gasLevel >= 100) {
+    showAlert('gas-injected-alert');
+    retinaFixed = true;
+    completeSurgery();
+  }
+}
+
+function completeSurgery() {
+  // Restaurar retina a su color original
+  const retina = document.querySelector('.retina-sphere');
+  retina.style.background = 'radial-gradient(circle at center, #500000 0%, #400000 20%, #300000 40%, #200000 70%, #100000 100%)';
+  
+  // Mostrar alerta de cirugía completada
+  showAlert('surgery-complete-alert', 0);
+}
+
+/* ================== CONTROL DE JOYSTICKS MEJORADO ================== */
+function initJoysticks() {
+  const joystickVitrectomo = document.getElementById('joystick-vitrectomo');
+  initJoystick(joystickVitrectomo, (x, y) => {
+    vitrectomoJoystickX = x;
+    vitrectomoJoystickY = y;
+    lastVitrectomoX = x;
+    lastVitrectomoY = y;
+    updateInstrumentPosition(x, y);
+    updateMiniLeftLine(x, y);
+    checkWallCollision();
+  }, 'vitrectomo');
+  
+  const joystickLight = document.getElementById('joystick-light');
+  initJoystick(joystickLight, (x, y) => {
+    lightJoystickX = x;
+    lightJoystickY = y;
+    lastLightX = x;
+    lastLightY = y;
+    updateEndoLightEffect(x, y);
+    updateMiniRightLine(x, y);
+    checkWallCollision();
+  }, 'light');
+}
+
+function initJoystick(joystickElement, updateCallback, type) {
+  const handle = joystickElement.querySelector('.joystick-handle');
+  const rect = joystickElement.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  const maxDistance = rect.width / 2 * joystickSensitivity;
+  
+  let isDragging = false;
+  let touchId = null;
+  
+  function handleStart(e) {
+    e.preventDefault();
+    if (isDragging) return;
+    
+    isDragging = true;
+    if (e.touches) {
+      // Para multitouch, encontrar el touch correcto
+      const touches = Array.from(e.touches);
+      const touch = touches.find(t => {
+        const element = document.elementFromPoint(t.clientX, t.clientY);
+        return element === joystickElement || element === handle;
+      });
+      
+      if (!touch) return;
+      touchId = touch.identifier;
+      activeTouchId = touchId;
+      handleMove(e);
+    } else {
+      handleMove(e);
+    }
+  }
+  
+  function handleMove(e) {
+    if (!isDragging) return;
+    
+    let clientX, clientY;
+    
+    if (e.touches) {
+      // Encontrar el touch específico
+      const touches = Array.from(e.touches);
+      const touch = touches.find(t => t.identifier === touchId);
+      if (!touch) return;
+      
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    const bounds = joystickElement.getBoundingClientRect();
+    const x = clientX - bounds.left;
+    const y = clientY - bounds.top;
+    
+    let deltaX = x - centerX;
+    let deltaY = y - centerY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    if (distance > maxDistance) {
+      const angle = Math.atan2(deltaY, deltaX);
+      deltaX = Math.cos(angle) * maxDistance;
+      deltaY = Math.sin(angle) * maxDistance;
+    }
+    
+    // Suavizar el movimiento con interpolación
+    gsap.to(handle, {
+      x: deltaX,
+      y: deltaY,
+      duration: 0.1,
+      ease: "power1.out"
+    });
+    
+    // Normalizar las coordenadas (0-100)
+    const normalizedX = ((deltaX + maxDistance) / (2 * maxDistance)) * 100;
+    const normalizedY = ((deltaY + maxDistance) / (2 * maxDistance)) * 100;
+    
+    updateCallback(normalizedX, normalizedY);
+  }
+  
+  function handleEnd(e) {
+    if (!isDragging) return;
+    
+    // Verificar si el touch que terminó es el que controla este joystick
+    if (e.touches) {
+      const touches = Array.from(e.changedTouches);
+      const touch = touches.find(t => t.identifier === touchId);
+      if (!touch) return;
+    }
+    
+    isDragging = false;
+    touchId = null;
+    activeTouchId = null;
+    
+    // Suavizar el retorno a la posición central
+    gsap.to(handle, {
+      x: 0,
+      y: 0,
+      duration: 0.3,
+      ease: "elastic.out(1, 0.5)"
+    });
+    
+    // Resetear posición cuando se suelta
+    if (type === 'light') {
+      updateCallback(50, 50);
+    } else {
+      updateCallback(50, 50);
+    }
+  }
+  
+  // Eventos táctiles
+  joystickElement.addEventListener('touchstart', handleStart, { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (activeTouchId !== null) {
+      const touches = Array.from(e.touches);
+      if (touches.some(t => t.identifier === activeTouchId)) {
+        handleMove(e);
+      }
+    }
+  }, { passive: false });
+  
+  document.addEventListener('touchend', handleEnd);
+  document.addEventListener('touchcancel', handleEnd);
+  
+  // Eventos de ratón
+  joystickElement.addEventListener('mousedown', handleStart);
+  document.addEventListener('mousemove', handleMove);
+  document.addEventListener('mouseup', handleEnd);
+}
+
+/* ================== ACTUALIZACIÓN DE POSICIONES ================== */
+function updateInstrumentPositions() {
+  updateInstrumentPosition(vitrectomoJoystickX, vitrectomoJoystickY);
+  requestAnimationFrame(updateInstrumentPositions);
+}
+function updateInstrumentPosition(normX, normY) {
+  const retina = document.getElementById('retina');
+  const retinaRect = retina.getBoundingClientRect();
+  const base = document.getElementById('instrument-base');
+  const tip = document.getElementById('instrument-tip');
+  const rod = document.getElementById('instrument-rod');
+  const tipShadow = document.querySelector('.instrument-tip-shadow');
+  const rodShadow = document.querySelector('.instrument-rod-shadow');
+  
+  // Calcular posición de la punta basada en el joystick
+  const maxOffset = retinaRect.width * 0.4;
+  const offsetX = (normX - 50) / 50 * maxOffset;
+  const offsetY = (normY - 50) / 50 * maxOffset;
+  
+  // Posición absoluta de la punta
+  const tipX = retinaRect.width / 2 + offsetX;
+  const tipY = retinaRect.height / 2 + offsetY;
+  
+  // Posición de la base (fija en la parte inferior derecha)
+  const baseX = retinaRect.width * 0.85;
+  const baseY = retinaRect.height * 0.85;
+  
+  // Actualizar posición de la punta
+  tip.style.left = tipX + 'px';
+  tip.style.top = tipY + 'px';
+  
+  // Calcular posición de la sombra basada en la profundidad
+  const depthRatio = (currentDepth + 250) / 200;
+  const shadowOffsetX = 60 * (1 - depthRatio * 0.7);
+  const shadowOffsetY = -60 * (1 - depthRatio * 0.7);
+  
+  // Posición de la sombra
+  const shadowX = tipX + shadowOffsetX;
+  const shadowY = tipY + shadowOffsetY;
+  
+  // Actualizar sombra de la punta
+  tipShadow.style.left = shadowX + 'px';
+  tipShadow.style.top = shadowY + 'px';
+  
+  // Ajustar tamaño de la sombra basado en profundidad
+  const shadowSize = 0.2 + depthRatio * 0.2;
+  tipShadow.style.width = (28 * shadowSize) + 'px';
+  tipShadow.style.height = (28 * shadowSize) + 'px';
+  
+  // Opacidad de las sombras
+  const shadowOpacity = 0.85;
+  tipShadow.style.opacity = shadowOpacity;
+  rodShadow.style.opacity = shadowOpacity;
+  
+  // Actualizar el palo para que conecte base y punta
+  updateInstrumentRod(tipX, tipY, baseX, baseY, shadowX, shadowY);
+  
+  checkWallCollision();
+  
+  if (currentDepth <= -200) {
+    checkVesselDamage();
+  }
+  
+  updateDepthIndicator();
+}
+
+function updateDepthIndicator() {
+  const depthIndicator = document.getElementById('depth-indicator');
+  
+  if (currentDepth > -80) {
+    depthIndicator.textContent = "Profundidad: Superficial";
+    depthIndicator.style.setProperty('--depth-color', '#3b82f6');
+  } else if (currentDepth > -150) {
+    depthIndicator.textContent = "Profundidad: Media";
+    depthIndicator.style.setProperty('--depth-color', '#10b981');
+  } else {
+    depthIndicator.textContent = "Profundidad: Profunda";
+    depthIndicator.style.setProperty('--depth-color', '#ef4444');
+  }
+}
+
+function updateEndoLightEffect(normX, normY) {
+  document.documentElement.style.setProperty('--light-x', normX + '%');
+  document.documentElement.style.setProperty('--light-y', normY + '%');
+  
+  const zVal = parseInt(document.getElementById('endo-z-slider').value);
+  const retinaRect = document.getElementById('retina').getBoundingClientRect();
+  const newLightSize = 20 + (retinaRect.width - 20) * (zVal / 200);
+  
+  document.documentElement.style.setProperty('--light-size', newLightSize + 'px');
+  document.getElementById('light-reflection').style.opacity = 0.7;
+  
+  if (zVal > 100) {
+    document.getElementById('light-scatter').classList.add('active');
+    document.getElementById('specular-highlight').classList.add('active');
+  } else {
+    document.getElementById('light-scatter').classList.remove('active');
+    document.getElementById('specular-highlight').classList.remove('active');
+  }
+}
+
+function updateMiniLeftLine(normX, normY) {
+  const defaultTipX = 350;
+  const defaultTipY = 300;
+  const scaleX = 2.5;
+  const scaleY = 1.8;
+  const offsetX = (normX - 50) * scaleX;
+  const offsetY = (normY - 50) * scaleY;
+  let tipX = defaultTipX + offsetX;
+  let tipY = defaultTipY + offsetY;
+  
+  tipX = Math.max(50, Math.min(750, tipX));
+  tipY = Math.max(50, Math.min(550, tipY));
+  
+  const miniLeft = document.getElementById('probeLight');
+  const miniLeftInner = document.getElementById('probeLightInner');
+  if(miniLeft && miniLeftInner) {
+    miniLeft.setAttribute('x2', tipX);
+    miniLeftInner.setAttribute('x2', tipX);
+    miniLeft.setAttribute('y2', tipY);
+    miniLeftInner.setAttribute('y2', tipY);
+  }
+}
+
+function updateMiniRightLine(normX, normY) {
+  const defaultTipX = 450;
+  const defaultTipY = 300;
+  const scaleX = 2.5;
+  const scaleY = 1.8;
+  const offsetX = (normX - 50) * scaleX;
+  const offsetY = (normY - 50) * scaleY;
+  let tipX = defaultTipX + offsetX;
+  let tipY = defaultTipY + offsetY;
+  
+  tipX = Math.max(50, Math.min(750, tipX));
+  tipY = Math.max(50, Math.min(550, tipY));
+  
+  const miniRight = document.getElementById('probeForceps');
+  const miniRightInner = document.getElementById('probeForcepsInner');
+  if(miniRight && miniRightInner) {
+    miniRight.setAttribute('x2', tipX);
+    miniRightInner.setAttribute('x2', tipX);
+    miniRight.setAttribute('y2', tipY);
+    miniRightInner.setAttribute('y2', tipY);
+  }
+}
+
+/* ================== GESTIÓN DE INSTRUMENTOS ================== */
+function setupEventListeners() {
+  document.getElementById('btn-vitrectomo').addEventListener('click', () => toggleInstrument('btn-vitrectomo', 'vitrectomo'));
+  document.getElementById('btn-laser').addEventListener('click', () => toggleInstrument('btn-laser', 'laser'));
+  document.getElementById('btn-pfc').addEventListener('click', () => toggleInstrument('btn-pfc', 'pfc'));
+  document.getElementById('btn-cautery').addEventListener('click', () => toggleInstrument('btn-cautery', 'cautery'));
+  document.getElementById('btn-gas').addEventListener('click', () => toggleInstrument('btn-gas', 'gas'));
+  document.getElementById('btn-simulate-detachment').addEventListener('click', simulateRetinaDetachmentProcedure);
+  
+  // Mejorar los eventos para el botón de acción
+  const actionButton = document.getElementById('btn-precionar');
+  
+  // Eventos de ratón
+  actionButton.addEventListener('mousedown', startAction);
+  actionButton.addEventListener('mouseup', stopAction);
+  actionButton.addEventListener('mouseleave', stopAction);
+  
+  // Eventos táctiles mejorados
+  actionButton.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    startAction();
+  }, { passive: false });
+  
+  actionButton.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    stopAction();
+  });
+  
+  document.getElementById('vitrectomo-z-slider').addEventListener('input', function() {
+    currentDepth = parseInt(this.value);
+    updateInstrumentPosition(vitrectomoJoystickX, vitrectomoJoystickY);
+  });
+  
+  document.getElementById('endo-z-slider').addEventListener('input', function() {
+    updateEndoLightEffect(lightJoystickX, lightJoystickY);
+  });
+}
+
+function startAction() {
+  if (!activeInstrument) return;
+  
+  isActionButtonPressed = true;
+  
+  // Mostrar indicador de acción
+  const actionIndicator = document.getElementById('instrument-action-indicator');
+  if (actionIndicator) {
+    actionIndicator.classList.add('active');
+    
+    // Actualizar texto según el instrumento activo
+    if (activeInstrument === 'vitrectomo') {
+      actionIndicator.textContent = "Vitrectomía";
+    } else if (activeInstrument === 'laser') {
+      actionIndicator.textContent = "Aplicando láser";
+    } else if (activeInstrument === 'cautery') {
+      actionIndicator.textContent = "Marcando con cauterio";
+    } else if (activeInstrument === 'pfc') {
+      actionIndicator.textContent = "Inyectando PFC";
+    } else if (activeInstrument === 'gas') {
+      actionIndicator.textContent = "Inyectando gas";
+    }
+  }
+  
+  // Iniciar el efecto continuo
+  vitrectomyInterval = setInterval(() => {
+    if (!isActionButtonPressed || !activeInstrument) {
+      clearInterval(vitrectomyInterval);
+      return;
+    }
+    
+    const retinaRect = document.getElementById('retina').getBoundingClientRect();
+    const tip = document.getElementById('instrument-tip');
+    const tipRect = tip.getBoundingClientRect();
+    
+    // Calcular posición relativa al centro de la retina
+    const offsetX = tipRect.left - retinaRect.left + tipRect.width/2 - retinaRect.width/2;
+    const offsetY = tipRect.top - retinaRect.top + tipRect.height/2 - retinaRect.height/2;
+    
+    // Crear efecto visual
+    if (activeInstrument === 'vitrectomo') {
+      if (procedureStep === 1 || procedureStep === 6) {
+        vitrectomyFunction(tipRect.left + tipRect.width/2, tipRect.top + tipRect.height/2);
+        removeNearbyBloodClots();
+        
+        if (vitreousRemoved >= 100 && procedureStep === 1) {
+          procedureStep = 2;
+          document.getElementById('btn-cautery').classList.add('active');
+          activeInstrument = 'cautery';
+          updateInstrumentTipAppearance();
+          showAlert('vitreous-removed-alert');
+        }
+        
+        // Activar el gas cuando el PFC llegue al 50%
+        if (pfcLevel <= 50 && procedureStep === 6) {
+          procedureStep = 7;
+          document.getElementById('btn-gas').classList.add('active');
+          activeInstrument = 'gas';
+          updateInstrumentTipAppearance();
+          
+          // Inyectar gas automáticamente
+          setTimeout(() => {
+            injectGas();
+          }, 500);
+        }
+      }
+    } else if (activeInstrument === 'laser' && procedureStep === 4) {
+      laserFunction({ 
+        clientX: tipRect.left + tipRect.width/2, 
+        clientY: tipRect.top + tipRect.height/2,
+        preventDefault: () => {}
+      });
+    } else if (activeInstrument === 'cautery' && (procedureStep === 2 || procedureStep === 4)) {
+      cauteryFunction({ 
+        clientX: tipRect.left + tipRect.width/2, 
+        clientY: tipRect.top + tipRect.height/2,
+        preventDefault: () => {}
+      });
+    } else if (activeInstrument === 'pfc' && procedureStep === 3) {
+      injectPFCForDetachment();
+    } else if (activeInstrument === 'gas' && procedureStep === 7) {
+      injectGas();
+    }
+    
+    // Actualizar UI inmediatamente
+    updateVitals();
+    
+  }, 100); // Ejecutar cada 100ms mientras se mantenga presionado
+}
+
+function stopAction() {
+  isActionButtonPressed = false;
+  
+  // Ocultar indicador de acción
+  const actionIndicator = document.getElementById('instrument-action-indicator');
+  if (actionIndicator) {
+    actionIndicator.classList.remove('active');
+  }
+  
+  // Detener el efecto continuo
+  if (vitrectomyInterval) {
+    clearInterval(vitrectomyInterval);
+    vitrectomyInterval = null;
+  }
+}
+
+function toggleInstrument(btnId, instrumentType) {
+  const btn = document.getElementById(btnId);
+  
+  if(btn.classList.contains('active')) {
+    btn.classList.remove('active');
+    activeInstrument = null;
+    isActionButtonPressed = false;
+    
+    // Resetear apariencia de la punta
+    const tip = document.getElementById('instrument-tip');
+    tip.className = 'instrument-tip';
+    
+    // Detener cualquier intervalo activo
+    if (vitrectomyInterval) {
+      clearInterval(vitrectomyInterval);
+      vitrectomyInterval = null;
+    }
+  } else {
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    
+    btn.classList.add('active');
+    activeInstrument = instrumentType;
+    
+    // Actualizar apariencia de la punta según el instrumento
+    updateInstrumentTipAppearance();
+  }
+}
+
+function updateInstrumentTipAppearance() {
+  const tip = document.getElementById('instrument-tip');
+  tip.className = 'instrument-tip';
+  
+  if (activeInstrument === 'vitrectomo') {
+    tip.classList.add('active-vitrectomo');
+  } else if (activeInstrument === 'laser') {
+    tip.classList.add('active-laser');
+  } else if (activeInstrument === 'cautery') {
+    tip.classList.add('active-cautery');
+  } else if (activeInstrument === 'pfc') {
+    tip.classList.add('active-pfc');
+  } else if (activeInstrument === 'gas') {
+    tip.classList.add('active-gas');
+  }
+}
+
+/* ================== FUNCIONES DE INSTRUMENTOS MEJORADAS ================== */
+function vitrectomyFunction(x, y) {
+  const retina = document.getElementById('retina');
+  const retinaRect = retina.getBoundingClientRect();
+  
+  // Crear efecto de vitrectomía
+  const vitrectomyEffect = document.createElement('div');
+  vitrectomyEffect.className = 'vitrectomy-effect';
+  vitrectomyEffect.style.left = (x - retinaRect.left - 30) + 'px';
+  vitrectomyEffect.style.top = (y - retinaRect.top - 30) + 'px';
+  
+  gsap.to(vitrectomyEffect, {
+    scale: 1,
+    opacity: 0.8,
+    duration: 0.5,
+    onComplete: () => {
+      if (vitrectomyEffect.parentNode) {
+        vitrectomyEffect.parentNode.removeChild(vitrectomyEffect);
+      }
+    }
+  });
+  
+  retina.appendChild(vitrectomyEffect);
+  
+  // Crear partículas de vitrectomía
+  for (let i = 0; i < 8; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'vitreous-particle';
+    particle.style.left = (x - retinaRect.left + (Math.random()*20 - 10)) + 'px';
+    particle.style.top = (y - retinaRect.top + (Math.random()*20 - 10)) + 'px';
+    particle.style.setProperty('--tx', Math.random()*40 - 20);
+    particle.style.setProperty('--ty', Math.random()*40 - 20);
+    retina.appendChild(particle);
+    
+    setTimeout(() => particle.remove(), 1500);
+  }
+  
+  vitreousRemoved = Math.min(100, vitreousRemoved + 0.8);
+  iop = Math.max(20, iop - 0.3); // No permitir que la PIO baje de 20
+  
+  // Remoción de PFC
+  if (procedureStep === 6) {
+    pfcLevel = Math.max(0, pfcLevel - 2);
+    document.getElementById('pfc-value').textContent = `${pfcLevel}%`;
+    document.getElementById('pfc-level').style.width = `${pfcLevel}%`;
+    
+    // Eliminar el efecto de PFC cuando se remueve completamente
+    if (pfcLevel <= 0) {
+      document.getElementById('detached-retina-overlay').style.background = 'transparent';
+      
+      // Completar la cirugía cuando se elimina todo el PFC
+      completeSurgery();
+    }
+  }
+}
+
+function laserFunction(e) {
+  const retina = document.getElementById('retina');
+  const retinaRect = retina.getBoundingClientRect();
+  
+  // Crear efecto de láser temporal
+  const laserSpot = document.createElement('div');
+  laserSpot.className = 'laser-spot';
+  laserSpot.style.left = (e.clientX - retinaRect.left - 12) + 'px';
+  laserSpot.style.top = (e.clientY - retinaRect.top - 12) + 'px';
+  retina.appendChild(laserSpot);
+  
+  // Crear marca permanente de láser (punto blanco)
+  const burnMark = document.createElement('div');
+  burnMark.className = 'laser-burn-permanent';
+  burnMark.style.left = (e.clientX - retinaRect.left - 3) + 'px';
+  burnMark.style.top = (e.clientY - retinaRect.top - 3) + 'px';
+  document.getElementById('permanent-marks').appendChild(burnMark);
+  
+  // Actualizar parámetros fisiológicos
+  iop += 0.5;
+  perfusion -= 0.2;
+  
+  // Solo verificar proximidad al agujero cuando se está en la fase de fijación retiniana (paso 4)
+  if (procedureStep === 4) {
+    const hole = document.getElementById('retinal-hole');
+    const holeRect = hole.getBoundingClientRect();
+    const holeCenterX = holeRect.left + holeRect.width/2;
+    const holeCenterY = holeRect.top + holeRect.height/2;
+    
+    // Calcular distancia al centro del agujero
+    const distance = Math.sqrt(
+      Math.pow(e.clientX - holeCenterX, 2) + 
+      Math.pow(e.clientY - holeCenterY, 2)
+    );
+    
+    // Radio efectivo (radio del agujero + margen de 15px)
+    const effectiveRadius = holeRect.width/2 + 15;
+    
+    // Mostrar guía visual para los puntos de láser
+    if (distance < effectiveRadius + 50 && marksAroundHole < requiredMarks) {
+      // Crear anillo guía alrededor del agujero
+      if (!document.getElementById('laser-guide-ring')) {
+        const guideRing = document.createElement('div');
+        guideRing.id = 'laser-guide-ring';
+        guideRing.style.position = 'absolute';
+        guideRing.style.width = `${effectiveRadius * 2}px`;
+        guideRing.style.height = `${effectiveRadius * 2}px`;
+        guideRing.style.left = `${holeCenterX - retinaRect.left - effectiveRadius}px`;
+        guideRing.style.top = `${holeCenterY - retinaRect.top - effectiveRadius}px`;
+        guideRing.style.border = '2px dashed rgba(255, 255, 255, 0.5)';
+        guideRing.style.borderRadius = '50%';
+        guideRing.style.pointerEvents = 'none';
+        guideRing.style.zIndex = '16';
+        guideRing.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.3)';
+        retina.appendChild(guideRing);
+      }
+      
+      // Resaltar el agujero cuando se acerca el instrumento
+      gsap.to(hole, {
+        boxShadow: '0 0 20px rgba(255,255,255,0.8)',
+        duration: 0.3
+      });
+    }
+    
+    if (distance < effectiveRadius) {
+      marksAroundHole++;
+      
+      // Crear indicador numérico del punto aplicado
+      const markerNumber = document.createElement('div');
+      markerNumber.className = 'laser-marker-number';
+      markerNumber.textContent = marksAroundHole;
+      markerNumber.style.left = (e.clientX - retinaRect.left - 10) + 'px';
+      markerNumber.style.top = (e.clientY - retinaRect.top - 10) + 'px';
+      document.getElementById('permanent-marks').appendChild(markerNumber);
+      
+      // Animación de confirmación
+      gsap.to(markerNumber, {
+        scale: 1.5,
+        duration: 0.3,
+        yoyo: true,
+        repeat: 1
+      });
+      
+      // Si se alcanza el número requerido de puntos (7)
+      if (marksAroundHole >= requiredMarks) {
+        // Eliminar el anillo guía
+        const guideRing = document.getElementById('laser-guide-ring');
+        if (guideRing) guideRing.remove();
+        
+        // Mostrar mensaje de éxito
+        showAlert('retina-fixed-alert');
+        procedureStep = 5;
+        
+        // Cambiar a vitrectomo después de 2 segundos
+        setTimeout(() => {
+          procedureStep = 6;
+          document.getElementById('btn-vitrectomo').classList.add('active');
+          activeInstrument = 'vitrectomo';
+          updateInstrumentTipAppearance();
+          
+          // Restaurar apariencia normal del agujero
+          gsap.to(hole, {
+            boxShadow: '0 0 15px rgba(255,255,255,0.5)',
+            duration: 0.5
+          });
+        }, 2000);
+      }
+    }
+  }
+  
+  // Eliminar efecto de láser después de 2.5 segundos
+  setTimeout(() => {
+    if (laserSpot.parentNode) {
+      laserSpot.parentNode.removeChild(laserSpot);
+    }
+  }, 2500);
+}
+
+function cauteryFunction(e) {
+  const retina = document.getElementById('retina');
+  const retinaRect = retina.getBoundingClientRect();
+  
+  // Efecto visual de cauterio temporal
+  const cauteryEffect = document.createElement('div');
+  cauteryEffect.className = 'cautery-effect';
+  cauteryEffect.style.left = (e.clientX - retinaRect.left - 15) + 'px';
+  cauteryEffect.style.top = (e.clientY - retinaRect.top - 15) + 'px';
+  retina.appendChild(cauteryEffect);
+  
+  // Verificar si está en la mácula
+  const macula = document.querySelector('.macula');
+  const maculaRect = macula.getBoundingClientRect();
+  const maculaDistance = Math.sqrt(
+    Math.pow(e.clientX - (maculaRect.left + maculaRect.width/2), 2) + 
+    Math.pow(e.clientY - (maculaRect.top + maculaRect.height/2), 2)
+  );
+  
+  if (maculaDistance < maculaRect.width/2) {
+    showAlert('vision-loss-alert');
+  }
+  
+  // Crear marca permanente en la punta del instrumento
+  const burnMark = document.createElement('div');
+  burnMark.className = 'cautery-mark-permanent';
+  burnMark.style.left = (e.clientX - retinaRect.left - 2) + 'px';
+  burnMark.style.top = (e.clientY - retinaRect.top - 2) + 'px';
+  document.getElementById('permanent-marks').appendChild(burnMark);
+  
+  cauteryMarks.push({
+    element: burnMark,
+    x: e.clientX - retinaRect.left - 2,
+    y: e.clientY - retinaRect.top - 2
+  });
+  
+  // Verificar si se han colocado los 7 puntos alrededor del agujero
+  if (procedureStep === 2) {
+    const hole = document.getElementById('retinal-hole');
+    const holeRect = hole.getBoundingClientRect();
+    const holeCenterX = holeRect.left + holeRect.width/2;
+    const holeCenterY = holeRect.top + holeRect.height/2;
+    
+    const distance = Math.sqrt(
+      Math.pow(e.clientX - holeCenterX, 2) + 
+      Math.pow(e.clientY - holeCenterY, 2)
+    );
+    
+    if (distance < holeRect.width/2 + 30) {
+      marksAroundHole++;
+      
+      // Crear indicador numérico del punto aplicado
+      const markerNumber = document.createElement('div');
+      markerNumber.className = 'laser-marker-number';
+      markerNumber.textContent = marksAroundHole;
+      markerNumber.style.left = (e.clientX - retinaRect.left - 10) + 'px';
+      markerNumber.style.top = (e.clientY - retinaRect.top - 10) + 'px';
+      document.getElementById('permanent-marks').appendChild(markerNumber);
+      
+      // Animación de confirmación
+      gsap.to(markerNumber, {
+        scale: 1.5,
+        duration: 0.3,
+        yoyo: true,
+        repeat: 1
+      });
+      
+      if (marksAroundHole >= requiredMarks) {
+        holeLocated = true;
+        showAlert('hole-located-alert');
+        procedureStep = 3;
+        
+        // Cambiar a PFC después de 2 segundos
+        setTimeout(() => {
+          document.getElementById('btn-pfc').classList.add('active');
+          activeInstrument = 'pfc';
+          updateInstrumentTipAppearance();
+        }, 2000);
+      }
+    }
+  }
+  
+  // Actualizar parámetros fisiológicos
+  perfusion += 1;
+  iop = Math.min(30, iop + 0.3);
+  
+  // Eliminar efecto de cauterio después de 1 segundo
+  setTimeout(() => {
+    if (cauteryEffect.parentNode) {
+      cauteryEffect.parentNode.removeChild(cauteryEffect);
+    }
+  }, 1000);
+}
+
+function injectPFC() {
+  if (pfcLevel >= 100) return;
+  
+  const retina = document.getElementById('retina');
+  const pfcBubbles = document.getElementById('pfc-bubbles');
+  
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const bubble = document.createElement('div');
+      bubble.className = 'pfc-bubble';
+      bubble.style.left = `${50 + Math.random() * 20}%`;
+      bubble.style.top = `${50 + Math.random() * 20}%`;
+      bubble.style.width = `${10 + Math.random() * 20}px`;
+      bubble.style.height = bubble.style.width;
+      pfcBubbles.appendChild(bubble);
+      
+      gsap.to(bubble, {
+        y: `-=${30 + Math.random() * 50}`,
+        x: `+=${Math.random() * 40 - 20}`,
+        opacity: 0.8,
+        duration: 2,
+        onComplete: () => bubble.remove()
+      });
+    }, i * 200);
+  }
+  
+  pfcLevel = Math.min(100, pfcLevel + 10);
+  document.getElementById('pfc-value').textContent = `${pfcLevel}%`;
+  document.getElementById('pfc-level').style.width = `${pfcLevel}%`;
+  
+  iop = Math.min(30, iop + 3);
+  perfusion = Math.min(100, perfusion + 2);
+  
+  retina.style.background = `
+    radial-gradient(circle at 35% 45%, rgba(100,255,100,0.1) 0%, rgba(50,200,50,0.2) 70%, transparent 100%),
+    ${retina.style.background}`;
+}
+
+/* ================== ACTUALIZACIÓN DE PARÁMETROS ================== */
+function updateVitals() {
+  // Variación natural de los parámetros
+  iop += (Math.random() - 0.5) * 0.1;
+  perfusion += (Math.random() - 0.5) * 0.2;
+  
+  // Efecto de la vitrectomía en la PIO
+  if (activeInstrument === 'vitrectomo') {
+    iop = Math.max(20, iop - 0.05); // No permitir que la PIO baje de 20
+    vitreousRemoved = Math.min(100, vitreousRemoved + 0.1);
+    
+    // Estabilizar la PIO cuando se completa la vitrectomía
+    if (vitreousRemoved >= 100) {
+      iop = Math.max(20, iop - 0.1);
+    }
+  }
+  
+  if (pfcLevel > 0) {
+    iop = Math.max(iop, 12 + pfcLevel / 10);
+    perfusion = Math.min(perfusion + pfcLevel / 50, 100);
+  }
+  
+  if (gasLevel > 0) {
+    iop = Math.max(iop, 15 + gasLevel / 20);
+    perfusion = Math.max(perfusion - gasLevel / 100, 60);
+  }
+  
+  checkRetinaDetachment();
+  checkHighIOP();
+  
+  // Limitar valores dentro de rangos razonables
+  iop = Math.max(20, Math.min(30, iop)); // Mínimo de 20 mmHg
+  perfusion = Math.max(60, Math.min(100, perfusion));
+  vitreousRemoved = Math.max(0, Math.min(100, vitreousRemoved));
+  
+  // Actualizar valores en la interfaz
+  document.getElementById('iop-value').innerText = iop.toFixed(1) + " mmHg";
+  document.getElementById('iop-level').style.width = ((iop - 10) / 20 * 100) + "%";
+  
+  document.getElementById('perfusion-value').innerText = perfusion.toFixed(0) + "%";
+  document.getElementById('perfusion-level').style.width = perfusion + "%";
+  
+  document.getElementById('vitreous-value').innerText = vitreousRemoved.toFixed(0) + "%";
+  document.getElementById('vitreous-level').style.width = vitreousRemoved + "%";
+  
+  // Actualizar clases de estado
+  const iopElement = document.getElementById('iop-value');
+  iopElement.classList.remove('normal', 'warning', 'danger');
+  
+  if(iop < 15 || iop > 25) {
+    iopElement.classList.add('danger');
+  } else if(iop < 18 || iop > 22) {
+    iopElement.classList.add('warning');
+  } else {
+    iopElement.classList.add('normal');
+  }
+  
+  setTimeout(updateVitals, 1000);
+}
+  </script>
+</body>
+</html>

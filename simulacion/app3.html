@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Simulador Quirúrgico - Agujero Macular</title>
+  <link rel="stylesheet" href="app5.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+  <style>
+     body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: transparent;
+      overflow: hidden;
+    }
+    
+    .retina-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    
+    svg {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .sf6-bubble {
+    position: absolute;
+    background: transparent !important;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 100;
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    /* Borde más grueso para burbujas grandes */
+    border: 4px solid rgba(0, 100, 255, 0.7);
+    box-shadow: 
+        0 0 15px rgba(0, 150, 255, 0.5),
+        inset 0 0 20px rgba(200, 230, 255, 0.3);
+}
+
+/* Efecto de reflejo para burbujas grandes */
+.sf6-bubble::before {
+    content: '';
+    position: absolute;
+    top: 15%;
+    left: 15%;
+    width: 25%;
+    height: 25%;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    filter: blur(2px);
+}
+
+.sf6-bubble {
+    position: absolute;
+    background: transparent;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 100;
+    border: 2px solid rgba(0, 100, 255, 0.8);
+    box-shadow: 0 0 8px rgba(0, 150, 255, 0.6);
+    transform: translateZ(0);
+    animation: bubble-float 3s ease-in forwards;
+}
+
+@keyframes bubble-float {
+    0% {
+        transform: translateY(0) scale(0.8);
+        opacity: 0.9;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-150px) scale(1.2);
+        opacity: 0;
+    }
+}
+
+.sf6-bubble::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 20%;
+    width: 15%;
+    height: 15%;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    filter: blur(1px);
+}
+/* Asegurar que la retina tenga posición relativa */
+.retina-sphere {
+  position: relative;
+  overflow: visible; /* Permitir que las burbujas salgan del contenedor */
+}
+
+/* Aumentar z-index si es necesario */
+.instrument-container {
+  z-index: 20; /* Menor que las burbujas (25) */
+}
+    /* Estado de éxito para la retina */
+.vital-value.success {
+  color: #4CAF50;
+  text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+/* Transición para el agujero macular */
+.macular-hole {
+  transition: all 1.5s ease-in-out;
+}
+
+/* Efecto de reflejo en las burbujas */
+.sf6-bubble::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  left: 15%;
+  width: 30%;
+  height: 30%;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  filter: blur(2px);
+}
+         /* Agregar este estilo para el feedback visual del teclado */
+         #btn-precionar.keyboard-active {
+      background-color: #4CAF50;
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+      transform: scale(0.95);
+    }
+    /* Estilos para el instrumento único - PALO GRIS */
+    .instrument-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 30;
+    }
+    
+    .instrument-rod {
+      position: absolute;
+      height: 8px;
+      background: linear-gradient(to right, #888, #ccc);
+      border-radius: 4px;
+      transform-origin: left center;
+      z-index: 30;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    
+    .instrument-tip {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ccc;
+      z-index: 31;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      transform: translate(-50%, -50%);
+    }
+    
+    .instrument-base {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #555;
+      z-index: 29;
+      box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    }
+    
+    .instrument-tip.active-vitrectomo {
+      background: #3b82f6;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+    }
+    
+    .instrument-tip.active-sf6 {
+      background: #ffff55;
+      box-shadow: 0 0 15px rgba(255, 255, 85, 0.7);
+    }
+    
+    .instrument-tip.active-forceps {
+      background: #00cc66;
+      box-shadow: 0 0 15px rgba(0, 204, 102, 0.7);
+      width: 15px;
+      height: 25px;
+      border-radius: 5px;
+      clip-path: polygon(0% 0%, 100% 0%, 80% 100%, 20% 100%);
+    }
+    
+    .instrument-tip.active-colorante {
+      background: #00aaff;
+      box-shadow: 0 0 15px rgba(0, 170, 255, 0.7);
+    }
+    
+    /* Efecto de pinzas agarrando */
+    .instrument-tip.grasping {
+      animation: grasping 0.5s infinite alternate;
+    }
+    
+    @keyframes grasping {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      100% { transform: translate(-50%, -50%) scale(1.2); }
+    }
+    
+    /* Indicador de acción */
+    .instrument-action-indicator {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .instrument-action-indicator.active {
+      opacity: 1;
+    }
+    
+    /* Retina y efectos visuales */
+    .macula {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(200, 200, 100, 0.3);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 20px rgba(200, 200, 100, 0.5);
+      z-index: 16;
+    }
+    
+    /* Agujero macular mejorado */
+    .macular-hole {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 17;
+      box-shadow: 0 0 10px rgba(0,0,0,0.8);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    /* Membrana Limitante Interna (MLI) - Mejorada con efecto de peeling */
+    .mli-layer {
+      position: absolute;
+      width: 40%;
+      height: 40%;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,170,255,0.1);
+      z-index: 18;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      border: 1px dashed rgba(0,170,255,0.3);
+      clip-path: circle(50% at 50% 50%);
+      transform-style: preserve-3d;
+    }
+    
+    .mli-layer.visible {
+      opacity: 1;
+    }
+    
+    .mli-peeling {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(0,170,255,0.15);
+      z-index: 19;
+      pointer-events: none;
+      transform-origin: center;
+      clip-path: circle(50% at 50% 50%);
+      transform-style: preserve-3d;
+    }
+    
+    .mli-flap {
+      position: absolute;
+      background: rgba(0,170,255,0.2);
+      border: 1px dashed rgba(0,170,255,0.5);
+      z-index: 20;
+      transform-origin: center;
+      transform-style: preserve-3d;
+      pointer-events: none;
+      border-radius: 50%;
+    }
+    
+    /* Efectos de vitrectomía */
+    .vitrectomy-effect {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle, 
+        rgba(255,255,255,0.2) 0%, 
+        rgba(255,255,255,0.1) 40%, 
+        transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 14;
+      transform: scale(0);
+      opacity: 0;
+    }
+    
+    .suction-particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(200, 200, 255, 0.8);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 12;
+      box-shadow: 0 0 5px rgba(255,255,255,0.6);
+    }
+    
+    /* Efecto de colorante mejorado */
+    .dye-effect {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 170, 255, 0.3);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 13;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    
+    .dye-effect.active {
+      opacity: 1;
+    }
+    
+    .dye-effect.residual {
+      width: 40%;
+      height: 40%;
+      background: rgba(0, 170, 255, 0.15);
+      opacity: 0;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .dye-particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: #00aaff;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 12;
+    }
+    
+    /* VISUALIZACIÓN OCT - Mejorada */
+    #oct-container {
+      display: none;
+    }
+    
+    /* Vítreo mejorado - sin filamentos */
+    .vitreous {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle, 
+        rgba(255,255,255,0.2) 0%, 
+        rgba(255,255,255,0.3) 50%, 
+        rgba(255,255,255,0.1) 100%);
+      z-index: 10;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      opacity: 1;
+    }
+    
+    /* Retina central */
+    .retina-sphere {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    
+    /* Control de gas SF6 */
+    #sf6-control {
+      margin-top: 10px;
+      display: none;
+    }
+    
+    #sf6-slider {
+      width: 100%;
+    }
+
+    /* Burbujas de gas SF6 mejoradas */
+    .sf6-bubble {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 19;
+      animation: bubble-float 4s ease-in forwards, bubble-pulse 2s infinite alternate;
+    }
+
+    @keyframes bubble-float {
+      0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0.8;
+      }
+      100% {
+        transform: translateY(-100px) scale(1.5);
+        opacity: 0;
+      }
+    }
+    
+    @keyframes bubble-pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    /* Alertas específicas para cada paso */
+    .alert-container {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 500px;
+      width: 90%;
+      z-index: 10000;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .alert-icon {
+      font-size: 2rem;
+      margin-right: 15px;
+    }
+
+    .alert-content {
+      flex: 1;
+    }
+
+    .alert-timer {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      margin-top: 10px;
+      border-radius: 2px;
+      width: 100%;
+    }
+
+    .alert-dismiss {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    /* Nuevos estilos para el efecto de expansión del colorante */
+    .dye-wave {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(0, 170, 255, 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 14;
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- CASO CLÍNICO -->
+  <div id="clinical-case">
+    <div id="clinical-case-content">
+      <h2>CASO CLÍNICO: AGUJERO MACULAR</h2>
+      
+      <h3>Paciente:</h3>
+      <p>Mujer de 62 años, disminución progresiva de agudeza visual en ojo derecho</p>
+      
+      <h3>Síntomas:</h3>
+      <p>Metamorfopsia, escotoma central, pérdida de visión central</p>
+      
+      <h3>Hallazgos:</h3>
+      <ul>
+        <li>Agujero macular completo estadio IV</li>
+        <li>Desprendimiento vítreo posterior</li>
+        <li>Edema macular quístico leve</li>
+        <li>Membrana limitante interna engrosada</li>
+      </ul>
+      
+      <h3>OBJETIVOS QUIRÚRGICOS:</h3>
+      <ol>
+        <li>Realizar vitrectomía posterior</li>
+        <li>Peeling de membrana limitante interna</li>
+        <li>Aplicación de colorante para visualización</li>
+        <li>Inyección de gas SF6 para aplanamiento retiniano</li>
+      </ol>
+      
+      <button id="start-simulation-btn">Iniciar Simulación</button>
+    </div>
+  </div>
+
+  <div id="container">
+    <!-- SISTEMA DE ALERTAS PROFESIONAL -->
+    <div id="alert-system">
+      <div class="alert-container" id="wall-collision-alert">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">
+          <h3>COLISIÓN CON ESTRUCTURA OCULAR</h3>
+          <p>¡Advertencia! El instrumento ha contactado con la pared ocular. Retire inmediatamente y reevalúe la posición.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="retina-detachment-alert">
+        <div class="alert-icon">❗</div>
+        <div class="alert-content">
+          <h3>DESPRENDIMIENTO DE RETINA</h3>
+          <p>¡Emergencia! Se ha detectado desprendimiento retiniano. Suspender procedimiento e inyectar gas inmediatamente.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="high-iop-alert">
+        <div class="alert-icon">📈</div>
+        <div class="alert-content">
+          <h3>PRESIÓN INTRAOCULAR ELEVADA</h3>
+          <p>PIO > 25 mmHg. Riesgo de daño al nervio óptico. Reducir flujo de irrigación y considerar paracentesis.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="surgery-complete-alert">
+        <div class="alert-icon">🏥</div>
+        <div class="alert-content">
+          <h3>CIRUGÍA COMPLETADA</h3>
+          <p>Procedimiento finalizado con éxito. El agujero macular ha sido tratado y la retina está aplanada.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss" id="back-to-menu-btn">Volver al Menú</button>
+      </div>
+      
+      <!-- NUEVAS ALERTAS PARA CADA PASO -->
+      <div class="alert-container" id="vitreous-removed-alert">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content">
+          <h3>VITRECTOMÍA COMPLETADA</h3>
+          <p>Se ha removido el 100% del vítreo. Proceda a aplicar el colorante para visualizar la membrana limitante interna.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="dye-removed-alert">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content">
+          <h3>COLORANTE REMOVIDO</h3>
+          <p>El colorante ha sido removido satisfactoriamente. La membrana limitante interna es visible. Proceda con el peeling.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="peeling-complete-alert">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content">
+          <h3>PEELING COMPLETADO</h3>
+          <p>La membrana limitante interna ha sido removida completamente. Proceda a inyectar gas SF6 para aplanamiento retiniano.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+      
+      <div class="alert-container" id="sf6-adjust-alert">
+        <div class="alert-icon">🔧</div>
+        <div class="alert-content">
+          <h3>AJUSTE DE GAS SF6</h3>
+          <p>Por favor ajuste el nivel de gas SF6 al 18% usando el control deslizante en el panel de parámetros.</p>
+          <div class="alert-timer"></div>
+        </div>
+        <button class="alert-dismiss">×</button>
+      </div>
+    </div>
+
+    <!-- MINI MAPA -->
+    <div id="miniMapContainer">
+      <svg id="eyeCrossSection" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <radialGradient id="bgGradient" cx="50%" cy="50%" r="70%">
+            <stop offset="0%" stop-color="#1E293B" />
+            <stop offset="100%" stop-color="#0F172A" />
+          </radialGradient>
+          <radialGradient id="lensGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#E0F7FA" stop-opacity="0.9" />
+            <stop offset="70%" stop-color="#B2EBF2" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#80DEEA" stop-opacity="0.7" />
+          </radialGradient>
+          <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="8" />
+            <feOffset dx="0" dy="4" result="offsetblur" />
+            <feComponentTransfer>
+              <feFuncA type="linear" slope="0.3" />
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <rect width="800" height="600" fill="url(#bgGradient)" />
+        <ellipse id="lens-minimap" cx="400" cy="150" rx="100" ry="65" fill="url(#lensGradient)" filter="url(#dropShadow)" />
+        <ellipse cx="400" cy="150" rx="95" ry="60" fill="none" stroke="#B3E5FC" stroke-width="2" />
+        <circle id="iris-minimap" cx="400" cy="150" r="55" fill="none" stroke="url(#irisGradient)" stroke-width="15" />
+        <circle cx="400" cy="150" r="30" fill="#000000" />
+        <circle id="retina-wall" cx="400" cy="300" r="250" fill="none" stroke="#E0E0E0" stroke-width="4" />
+        <circle id="retina-minimap" cx="400" cy="300" r="240" fill="#400000" opacity="0.8" />
+        <circle id="miniCenter" cx="400" cy="300" r="8" fill="#00f7ff" />
+        <line id="probeLight" x1="225" y1="100" x2="350" y2="300" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" />
+        <line id="probeLightInner" x1="225" y1="100" x2="350" y2="300" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" />
+        <line id="probeForceps" x1="575" y1="100" x2="450" y2="300" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" />
+        <line id="probeForcepsInner" x1="575" y1="100" x2="450" y2="300" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" />
+      </svg>
+    </div>
+
+    <!-- PANEL DE INSTRUMENTOS -->
+    <div class="instrument-panel">
+      <button class="toggle-btn" id="btn-vitrectomo">Vitrectomo</button>
+      <button class="toggle-btn" id="btn-peeling">Peeling</button>
+      <button class="toggle-btn" id="btn-colorante">Colorante</button>
+      <button class="toggle-btn" id="btn-sf6">SF6</button>
+    </div>
+
+    <!-- PANEL DE PARÁMETROS -->
+    <div class="control-panel">
+      <div class="vital-sign">
+        <span class="vital-label">Presión Intraocular:</span>
+        <span class="vital-value normal" id="iop-value">16 mmHg</span>
+      </div>
+      <div id="iop-gauge" class="gauge-container">
+        <div class="gauge-level" id="iop-level"></div>
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Perfusión Retiniana:</span>
+        <span class="vital-value normal" id="perfusion-value">95%</span>
+      </div>
+      <div id="perfusion-gauge" class="gauge-container">
+        <div class="gauge-level" id="perfusion-level"></div>
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Vitreo Removido:</span>
+        <span class="vital-value" id="vitreous-value">0%</span>
+      </div>
+      <div id="vitreous-gauge" class="gauge-container">
+        <div class="gauge-level" id="vitreous-level"></div>
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Colorante Removido:</span>
+        <span class="vital-value" id="dye-removed-value">0%</span>
+      </div>
+      <div id="dye-removed-gauge" class="gauge-container">
+        <div class="gauge-level" id="dye-removed-level"></div>
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Nivel de SF6:</span>
+        <span class="vital-value" id="sf6-value">0%</span>
+      </div>
+      <div id="sf6-control">
+        <input type="range" id="sf6-slider" min="0" max="100" value="0">
+      </div>
+      
+      <div class="vital-sign">
+        <span class="vital-label">Estado Retina:</span>
+        <span class="vital-value normal" id="retina-status">Estable</span>
+      </div>
+    </div>
+
+    <!-- JOYSTICKS MEJORADOS -->
+    <div id="joystick-light-container" class="joystick-container">
+      <div id="joystick-light" class="joystick">
+        <div class="joystick-handle"></div>
+      </div>
+      <div class="slider-container">
+        <label>Luz (Z)</label>
+        <input type="range" id="endo-z-slider" min="0" max="200" value="50">
+      </div>
+    </div>
+
+    <div id="joystick-vitrectomo-container" class="joystick-container">
+      <div id="joystick-vitrectomo" class="joystick">
+        <div class="joystick-handle"></div>
+      </div>
+      <div class="slider-container">
+        <label>Instrumento (Z)</label>
+        <input type="range" id="vitrectomo-z-slider" min="-250" max="-50" value="-150">
+        <button id="btn-precionar">Accionar</button>
+      </div>
+    </div>
+
+    <!-- RETINA CENTRAL -->
+   <div id="eye-chamber">
+    <div class="retina-container" id="retina">
+      <div class="retina-sphere">
+        <div class="retina-texture"></div>
+        <div class="retina-nerve"></div>
+        <div class="optic-disc">
+          <div class="optic-cup"></div>
+        </div>
+        <div class="macula"></div>
+        <div class="macular-hole"></div>
+        <div class="mli-layer"></div>
+          <svg viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <style type="text/css">
+          .blood-vessel {
+            stroke: #8B0000;
+            stroke-width: 1.5;
+            fill: #8b0808;
+            fill-opacity: 0.7;
+          }
+          .small-details {
+            stroke: #8B0000;
+            stroke-width: 1;
+            fill: none;
+          }
+        </style>
+      </defs>
+      
+      <!-- Vasos sanguíneos principales -->
+      <path d="M 558.00,952.00 L 552.00,938.00 L 538.00,922.00 L 499.00,901.00 L 477.00,882.00 L 448.00,821.00 L 432.00,801.00 L 415.00,791.00 L 366.00,773.00 L 346.00,760.00 L 331.00,745.00 L 317.00,721.00 L 301.00,676.00 L 281.00,651.00 L 301.00,722.00 L 338.00,790.00 L 364.00,863.00 L 368.00,881.00 L 368.00,905.00 L 364.00,923.00 L 361.00,925.00 L 365.00,895.00 L 357.00,857.00 L 331.00,789.00 L 297.00,729.00 L 275.00,654.00 L 260.00,630.00 L 239.00,607.00 L 226.00,585.00 L 218.00,554.00 L 215.00,514.00 L 208.00,544.00 L 210.00,574.00 L 253.00,694.00 L 251.00,721.00 L 236.00,759.00 L 238.00,811.00 L 229.00,837.00 L 227.00,835.00 L 234.00,811.00 L 231.00,757.00 L 246.00,716.00 L 247.00,700.00 L 242.00,677.00 L 205.00,586.00 L 194.00,615.00 L 164.00,653.00 L 154.00,686.00 L 144.00,704.00 L 125.00,723.00 L 110.00,733.00 L 101.00,735.00 L 124.00,720.00 L 141.00,701.00 L 162.00,645.00 L 188.00,614.00 L 196.00,599.00 L 200.00,584.00 L 199.00,544.00 L 207.00,512.00 L 166.00,542.00 L 125.00,561.00 L 83.00,601.00 L 66.00,608.00 L 58.00,607.00 L 82.00,597.00 L 120.00,557.00 L 166.00,534.00 L 205.00,505.00 L 209.00,501.00 L 209.00,482.00 L 203.00,458.00 L 195.00,449.00 L 153.00,424.00 L 124.00,415.00 L 101.00,404.00 L 71.00,382.00 L 116.00,407.00 L 151.00,418.00 L 134.00,393.00 L 122.00,354.00 L 111.00,334.00 L 87.00,310.00 L 57.00,296.00 L 65.00,296.00 L 83.00,304.00 L 115.00,332.00 L 125.00,348.00 L 135.00,381.00 L 149.00,408.00 L 169.00,428.00 L 193.00,442.00 L 177.00,403.00 L 174.00,366.00 L 167.00,345.00 L 154.00,320.00 L 108.00,255.00 L 97.00,227.00 L 92.00,198.00 L 94.00,184.00 L 98.00,216.00 L 108.00,245.00 L 160.00,320.00 L 178.00,360.00 L 180.00,320.00 L 161.00,248.00 L 163.00,210.00 L 176.00,166.00 L 167.00,213.00 L 166.00,246.00 L 186.00,323.00 L 181.00,391.00 L 186.00,412.00 L 210.00,458.00 L 214.00,474.00 L 217.00,450.00 L 209.00,401.00 L 219.00,350.00 L 218.00,282.00 L 229.00,238.00 L 229.00,221.00 L 222.00,193.00 L 222.00,171.00 L 236.00,122.00 L 260.00,84.00 L 236.00,134.00 L 227.00,174.00 L 228.00,194.00 L 235.00,220.00 L 235.00,240.00 L 224.00,283.00 L 225.00,351.00 L 216.00,390.00 L 216.00,416.00 L 223.00,445.00 L 223.00,464.00 L 217.00,496.00 L 229.00,461.00 L 228.00,412.00 L 237.00,388.00 L 267.00,346.00 L 292.00,284.00 L 332.00,238.00 L 353.00,180.00 L 407.00,121.00 L 433.00,73.00 L 426.00,97.00 L 410.00,126.00 L 359.00,182.00 L 337.00,242.00 L 300.00,284.00 L 282.00,330.00 L 307.00,304.00 L 333.00,283.00 L 414.00,236.00 L 432.00,222.00 L 465.00,183.00 L 489.00,135.00 L 504.00,113.00 L 531.00,85.00 L 546.00,74.00 L 548.00,75.00 L 509.00,115.00 L 463.00,198.00 L 433.00,229.00 L 481.00,208.00 L 526.00,173.00 L 545.00,163.00 L 564.00,158.00 L 615.00,158.00 L 651.00,153.00 L 697.00,134.00 L 735.00,123.00 L 750.00,115.00 L 765.00,99.00 L 763.00,106.00 L 742.00,124.00 L 698.00,139.00 L 660.00,156.00 L 698.00,161.00 L 725.00,161.00 L 767.00,154.00 L 764.00,156.00 L 718.00,166.00 L 693.00,166.00 L 649.00,160.00 L 621.00,164.00 L 560.00,166.00 L 528.00,180.00 L 499.00,204.00 L 471.00,220.00 L 522.00,222.00 L 583.00,237.00 L 609.00,235.00 L 653.00,225.00 L 673.00,226.00 L 702.00,238.00 L 729.00,261.00 L 747.00,269.00 L 766.00,273.00 L 798.00,272.00 L 838.00,254.00 L 863.00,250.00 L 867.00,252.00 L 837.00,258.00 L 809.00,273.00 L 791.00,278.00 L 765.00,278.00 L 738.00,271.00 L 764.00,298.00 L 801.00,313.00 L 820.00,334.00 L 830.00,339.00 L 846.00,339.00 L 865.00,330.00 L 885.00,325.00 L 908.00,327.00 L 876.00,330.00 L 843.00,344.00 L 821.00,341.00 L 832.00,357.00 L 851.00,375.00 L 874.00,387.00 L 906.00,398.00 L 921.00,406.00 L 923.00,410.00 L 901.00,399.00 L 867.00,388.00 L 847.00,377.00 L 827.00,358.00 L 801.00,319.00 L 762.00,303.00 L 723.00,262.00 L 688.00,237.00 L 673.00,232.00 L 654.00,231.00 L 606.00,242.00 L 578.00,243.00 L 577.00,242.00 L 568.00,241.00 L 557.00,237.00 L 554.00,237.00 L 550.00,235.00 L 547.00,235.00 L 543.00,233.00 L 540.00,233.00 L 539.00,232.00 L 536.00,232.00 L 535.00,231.00 L 533.00,231.00 L 573.00,262.00 L 616.00,272.00 L 636.00,281.00 L 653.00,299.00 L 672.00,333.00 L 693.00,350.00 L 739.00,362.00 L 759.00,376.00 L 766.00,391.00 L 765.00,396.00 L 759.00,381.00 L 747.00,369.00 L 707.00,359.00 L 720.00,377.00 L 732.00,422.00 L 752.00,456.00 L 756.00,472.00 L 754.00,475.00 L 749.00,455.00 L 726.00,416.00 L 713.00,372.00 L 703.00,361.00 L 681.00,348.00 L 667.00,335.00 L 649.00,303.00 L 636.00,288.00 L 619.00,279.00 L 586.00,273.00 L 567.00,266.00 L 519.00,229.00 L 497.00,226.00 L 464.00,227.00 L 415.00,246.00 L 348.00,284.00 L 408.00,286.00 L 458.00,269.00 L 484.00,272.00 L 496.00,279.00 L 509.00,292.00 L 536.00,342.00 L 547.00,355.00 L 589.00,373.00 L 607.00,384.00 L 657.00,438.00 L 642.00,428.00 L 602.00,385.00 L 555.00,365.00 L 572.00,390.00 L 586.00,436.00 L 599.00,462.00 L 586.00,444.00 L 566.00,388.00 L 533.00,348.00 L 507.00,300.00 L 489.00,282.00 L 468.00,275.00 L 453.00,277.00 L 407.00,293.00 L 351.00,291.00 L 330.00,297.00 L 292.00,331.00 L 262.00,367.00 L 247.00,390.00 L 238.00,410.00 L 237.00,415.00 L 237.00,430.00 L 255.00,407.00 L 300.00,385.00 L 336.00,362.00 L 359.00,353.00 L 388.00,351.00 L 412.00,359.00 L 449.00,387.00 L 470.00,399.00 L 514.00,407.00 L 490.00,408.00 L 467.00,402.00 L 449.00,392.00 L 415.00,366.00 L 397.00,358.00 L 373.00,356.00 L 351.00,361.00 L 325.00,375.00 L 346.00,374.00 L 366.00,381.00 L 409.00,425.00 L 456.00,448.00 L 407.00,429.00 L 364.00,386.00 L 343.00,379.00 L 325.00,380.00 L 264.00,408.00 L 250.00,420.00 L 238.00,443.00 L 238.00,463.00 L 231.00,489.00 L 242.00,487.00 L 270.00,495.00 L 287.00,495.00 L 338.00,474.00 L 392.00,478.00 L 420.00,469.00 L 402.00,479.00 L 390.00,482.00 L 339.00,479.00 L 303.00,496.00 L 285.00,501.00 L 269.00,501.00 L 247.00,494.00 L 234.00,494.00 L 229.00,499.00 L 229.00,510.00 L 239.00,532.00 L 251.00,544.00 L 283.00,566.00 L 360.00,567.00 L 376.00,564.00 L 391.00,557.00 L 434.00,515.00 L 456.00,505.00 L 434.00,519.00 L 402.00,555.00 L 380.00,568.00 L 363.00,572.00 L 311.00,570.00 L 288.00,572.00 L 298.00,588.00 L 314.00,629.00 L 326.00,647.00 L 360.00,679.00 L 384.00,691.00 L 414.00,690.00 L 445.00,676.00 L 461.00,659.00 L 484.00,613.00 L 500.00,599.00 L 525.00,588.00 L 491.00,611.00 L 462.00,667.00 L 446.00,682.00 L 428.00,692.00 L 469.00,699.00 L 503.00,694.00 L 515.00,687.00 L 554.00,644.00 L 596.00,614.00 L 605.00,601.00 L 611.00,584.00 L 612.00,589.00 L 607.00,603.00 L 596.00,619.00 L 557.00,647.00 L 521.00,689.00 L 503.00,700.00 L 486.00,704.00 L 461.00,704.00 L 427.00,697.00 L 388.00,698.00 L 369.00,693.00 L 388.00,723.00 L 409.00,741.00 L 460.00,762.00 L 490.00,779.00 L 512.00,784.00 L 577.00,756.00 L 593.00,742.00 L 602.00,722.00 L 606.00,688.00 L 615.00,673.00 L 628.00,661.00 L 610.00,687.00 L 605.00,729.00 L 594.00,749.00 L 574.00,764.00 L 514.00,790.00 L 547.00,801.00 L 580.00,800.00 L 604.00,791.00 L 654.00,749.00 L 674.00,724.00 L 696.00,665.00 L 697.00,626.00 L 707.00,590.00 L 703.00,545.00 L 706.00,522.00 L 711.00,592.00 L 703.00,622.00 L 703.00,656.00 L 700.00,670.00 L 723.00,644.00 L 769.00,611.00 L 779.00,594.00 L 795.00,542.00 L 808.00,527.00 L 836.00,505.00 L 856.00,471.00 L 880.00,454.00 L 905.00,449.00 L 886.00,455.00 L 866.00,467.00 L 855.00,480.00 L 837.00,512.00 L 805.00,538.00 L 796.00,553.00 L 784.00,597.00 L 776.00,611.00 L 762.00,625.00 L 731.00,645.00 L 714.00,661.00 L 700.00,681.00 L 675.00,735.00 L 659.00,753.00 L 618.00,789.00 L 588.00,805.00 L 549.00,808.00 L 527.00,803.00 L 492.00,788.00 L 519.00,822.00 L 536.00,831.00 L 557.00,836.00 L 601.00,835.00 L 647.00,819.00 L 676.00,803.00 L 711.00,773.00 L 751.00,749.00 L 766.00,731.00 L 791.00,678.00 L 804.00,665.00 L 838.00,642.00 L 856.00,623.00 L 894.00,554.00 L 922.00,530.00 L 968.00,505.00 L 917.00,538.00 L 900.00,554.00 L 888.00,571.00 L 861.00,625.00 L 835.00,652.00 L 796.00,681.00 L 770.00,736.00 L 757.00,752.00 L 793.00,739.00 L 830.00,712.00 L 856.00,699.00 L 876.00,695.00 L 917.00,694.00 L 939.00,685.00 L 960.00,668.00 L 957.00,674.00 L 939.00,689.00 L 921.00,697.00 L 876.00,700.00 L 850.00,707.00 L 795.00,745.00 L 781.00,752.00 L 747.00,761.00 L 725.00,772.00 L 707.00,784.00 L 686.00,803.00 L 685.00,803.00 L 682.00,806.00 L 681.00,806.00 L 675.00,811.00 L 672.00,812.00 L 671.00,813.00 L 684.00,810.00 L 721.00,812.00 L 771.00,832.00 L 801.00,840.00 L 826.00,840.00 L 845.00,834.00 L 847.00,836.00 L 827.00,843.00 L 798.00,844.00 L 776.00,839.00 L 723.00,818.00 L 693.00,815.00 L 663.00,820.00 L 600.00,842.00 L 558.00,843.00 L 544.00,840.00 L 581.00,865.00 L 603.00,876.00 L 624.00,881.00 L 665.00,882.00 L 684.00,887.00 L 742.00,929.00 L 727.00,923.00 L 682.00,891.00 L 664.00,887.00 L 616.00,886.00 L 582.00,873.00 L 518.00,830.00 L 474.00,780.00 L 455.00,769.00 L 421.00,757.00 L 395.00,742.00 L 376.00,722.00 L 348.00,679.00 L 313.00,644.00 L 281.00,578.00 L 270.00,567.00 L 242.00,548.00 L 230.00,535.00 L 223.00,522.00 L 227.00,566.00 L 234.00,587.00 L 252.00,613.00 L 302.00,667.00 L 311.00,684.00 L 324.00,722.00 L 334.00,739.00 L 347.00,753.00 L 366.00,766.00 L 416.00,785.00 L 432.00,794.00 L 453.00,819.00 L 482.00,881.00 L 494.00,893.00 L 537.00,918.00 L 554.00,937.00 L 558.00,952.00" class="blood-vessel" />
+  
+      <!-- Pequeños detalles -->
+      <path d="M 549.00,75.00 L 547.00,74.00 L 550.00,72.00 L 551.00,73.00 L 549.00,75.00" class="small-details" />
+      <path d="M 262.00,84.00 L 261.00,83.00 L 262.00,82.00 L 263.00,83.00 L 262.00,84.00" class="small-details" />
+      <path d="M 261.00,85.00 L 260.00,84.00 L 261.00,83.00 L 262.00,84.00 L 261.00,85.00" class="small-details" />
+      <path d="M 766.00,100.00 L 765.00,99.00 L 766.00,97.00 L 767.00,98.00 L 766.00,100.00" class="small-details" />
+      <path d="M 927.00,413.00 L 926.00,413.00 L 923.00,410.00 L 925.00,409.00 L 927.00,413.00" class="small-details" />
+      <path d="M 929.00,415.00 L 927.00,413.00 L 928.00,412.00 L 930.00,413.00 L 929.00,415.00" class="small-details" />
+      <path d="M 659.00,439.00 L 658.00,439.00 L 657.00,438.00 L 659.00,437.00 L 659.00,439.00" class="small-details" />
+      <path d="M 600.00,463.00 L 599.00,462.00 L 600.00,461.00 L 601.00,462.00 L 600.00,463.00" class="small-details" />
+      <path d="M 420.00,469.00 L 419.00,468.00 L 420.00,467.00 L 421.00,468.00 L 420.00,469.00" class="small-details" />
+      <path d="M 526.00,589.00 L 525.00,588.00 L 526.00,587.00 L 527.00,588.00 L 526.00,589.00" class="small-details" />
+      <path d="M 629.00,662.00 L 628.00,661.00 L 629.00,660.00 L 630.00,661.00 L 629.00,662.00" class="small-details" />
+      <path d="M 99.00,738.00 L 96.00,737.00 L 102.00,736.00 L 100.00,737.00 L 99.00,738.00" class="small-details" />
+      <path d="M 848.00,835.00 L 847.00,834.00 L 848.00,833.00 L 849.00,834.00 L 848.00,835.00" class="small-details" />
+      <path d="M 542.00,839.00 L 542.00,839.00 L 542.00,839.00 L 542.00,839.00 L 542.00,839.00" class="small-details" />
+    </svg>
+      </div>
+      <div id="light-mask"></div>
+      <div id="light-reflection"></div>
+      <div id="light-scatter" class="light-scatter"></div>
+      <div id="specular-highlight" class="specular-highlight"></div>
+      
+        <!-- Vítreo mejorado -->
+        <div class="vitreous" id="vitreous"></div>
+        
+        <!-- Efectos de colorante mejorados -->
+        <div id="dye-effects">
+          <div class="dye-effect" id="full-dye"></div>
+          <div class="dye-effect residual" id="residual-dye"></div>
+        </div>
+        
+        <!-- Instrumento único completo -->
+        <div class="instrument-container">
+          <div id="instrument-base" class="instrument-base"></div>
+          <div id="instrument-rod" class="instrument-rod"></div>
+          <div id="instrument-tip" class="instrument-tip"></div>
+          <div id="instrument-action-indicator" class="instrument-action-indicator">Vitrectomía</div>
+        </div>
+        
+        <!-- Marcas permanentes -->
+        <div id="permanent-marks"></div>
+        
+        <!-- Capa de peeling -->
+        <div id="peeling-layer"></div>
+      </div>
+    </div>
+
+    <!-- VISUALIZACIÓN OCT - Eliminada -->
+    <div id="oct-container" style="display: none;"></div>
+
+    <!-- INDICADOR DE PROFUNDIDAD -->
+    <div class="depth-indicator" id="depth-indicator">
+      Profundidad: Media
+    </div>
+  </div>
+  <script>
+ /* ================== VARIABLES GLOBALES ================== */
+let lightJoystickX = 50, lightJoystickY = 50;
+let vitrectomoJoystickX = 50, vitrectomoJoystickY = 50;
+let currentDepth = parseInt(document.getElementById('vitrectomo-z-slider').value);
+let activeInstrument = null;
+let iop = 16; // mmHg
+let perfusion = 95; // %
+let vitreousRemoved = 0; // %
+let retinaStatus = 'Estable';
+let sf6Level = 0; // %
+let procedureStep = 0; // 0: vitrectomía, 1: colorante, 2: peeling, 3: SF6
+let isActionButtonPressed = false;
+let vitrectomyInterval = null;
+let peelingProgress = 0;
+let dyeApplied = 0; // Cantidad de colorante aplicado
+let dyeRemoved = 0; // Cantidad de colorante removido
+let dyeWaves = []; // Para almacenar las ondas de colorante
+let actionPressCount = 0; // Contador de presiones del botón accionar
+let sf6PressCount = 0; // Contador de presiones con SF6 activo
+let mliFlaps = []; // Para almacenar los fragmentos de MLI levantados
+let mliPeelingStarted = false; // Indica si se ha iniciado el peeling de la MLI
+
+/* ================== INICIALIZACIÓN DE EVENTOS PARA MÓVIL ================== */
+function setupEventListeners() {
+  document.getElementById('btn-vitrectomo').addEventListener('click', () => toggleInstrument('btn-vitrectomo', 'vitrectomo'));
+  document.getElementById('btn-forceps').addEventListener('click', () => toggleInstrument('btn-forceps', 'forceps'));
+  document.getElementById('btn-laser').addEventListener('click', () => toggleInstrument('btn-laser', 'laser'));
+  
+  // Configuración de los sliders
+  document.getElementById('vitrectomo-z-slider').addEventListener('input', function() {
+    currentDepth = parseInt(this.value);
+    updateInstrumentPosition(vitrectomoJoystickX, vitrectomoJoystickY);
+  });
+  
+  document.getElementById('endo-z-slider').addEventListener('input', function() {
+    updateEndoLightEffect(lightJoystickX, lightJoystickY);
+  });
+  
+  // Eventos táctiles para los botones de instrumentos
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      const btnId = this.id;
+      const instrumentType = btnId.replace('btn-', '');
+      toggleInstrument(btnId, instrumentType);
+    }, { passive: false });
+  });
+}
+/* ================== INICIALIZACIÓN ================== */
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si venimos de app5.html con membrana removida
+    const membraneRemoved = localStorage.getItem('membraneRemoved') === 'true';
+    
+    if (membraneRemoved) {
+        // Ocultar caso clínico inmediatamente
+        document.getElementById('clinical-case').style.display = 'none';
+        // Iniciar simulación en paso 3 (SF6)
+        procedureStep = 3;
+        vitreousRemoved = 100;
+        dyeRemoved = 100;
+        peelingProgress = 100;
+        mliPeelingStarted = true;
+        initSimulation();
+        // Limpiar el estado de membrana removida
+        localStorage.removeItem('membraneRemoved');
+    } else {
+        // Mostrar caso clínico al inicio
+        document.getElementById('start-simulation-btn').addEventListener('click', function() {
+            anime({
+                targets: '#clinical-case',
+                opacity: 0,
+                duration: 500,
+                easing: 'easeInOutQuad',
+                complete: () => {
+                    document.getElementById('clinical-case').style.display = 'none';
+                    initSimulation();
+                }
+            });
+        });
+    }
+    
+    document.getElementById('back-to-menu-btn').addEventListener('click', function() {
+    localStorage.removeItem('simulationState');
+    localStorage.removeItem('membraneRemoved');
+    window.location.href = 'index.html';  // Redirige a index.html
+});
+});
+
+function initSimulation() {
+    // Configurar el instrumento único
+    setupSingleInstrument();
+    
+    // Crear vítreo solo si no hemos completado la vitrectomía
+    if (procedureStep < 1) {
+        createVitreous();
+    } else {
+        document.getElementById('vitreous').style.opacity = 0;
+    }
+    
+    initJoysticks();
+    setupEventListeners();
+    setupAlertDismissButtons();
+    updateVitals();
+    updateEndoLightEffect(50, 50);
+    
+    requestAnimationFrame(updateInstrumentPositions);
+}
+
+function setupSingleInstrument() {
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    
+    // Configurar la base del instrumento
+    const base = document.getElementById('instrument-base');
+    base.style.left = (retinaRect.width * 0.85 - 15) + 'px';
+    base.style.top = (retinaRect.height * 0.85 - 15) + 'px';
+    
+    // Configurar la punta del instrumento
+    const tip = document.getElementById('instrument-tip');
+    tip.style.left = (retinaRect.width / 2) + 'px';
+    tip.style.top = (retinaRect.height / 2) + 'px';
+    
+    // Actualizar el palo
+    updateInstrumentRod();
+}
+
+function updateInstrumentRod() {
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    const base = document.getElementById('instrument-base');
+    const baseRect = base.getBoundingClientRect();
+    const tip = document.getElementById('instrument-tip');
+    const tipRect = tip.getBoundingClientRect();
+    const rod = document.getElementById('instrument-rod');
+    
+    // Posiciones absolutas
+    const baseX = baseRect.left - retinaRect.left + baseRect.width/2;
+    const baseY = baseRect.top - retinaRect.top + baseRect.height/2;
+    const tipX = tipRect.left - retinaRect.left + tipRect.width/2;
+    const tipY = tipRect.top - retinaRect.top + tipRect.height/2;
+    
+    // Calcular longitud y ángulo
+    const dx = tipX - baseX;
+    const dy = tipY - baseY;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    
+    // Posicionar y rotar el palo
+    rod.style.width = length + 'px';
+    rod.style.left = baseX + 'px';
+    rod.style.top = baseY + 'px';
+    rod.style.transform = `rotate(${angle}deg)`;
+}
+
+/* ================== MANEJO DE TECLADO ================== */
+document.addEventListener('keydown', function(e) {
+    if ((e.keyCode === 32 || e.keyCode === 13) && !isActionButtonPressed) {
+        e.preventDefault();
+        startAction();
+        const actionButton = document.getElementById('btn-precionar');
+        actionButton.classList.add('keyboard-active');
+    }
+});
+
+/* ================== SISTEMA DE ALERTAS ================== */
+function setupAlertDismissButtons() {
+    document.querySelectorAll('.alert-dismiss').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const alert = this.parentElement;
+            anime({
+                targets: alert,
+                opacity: 0,
+                translateY: -20,
+                duration: 300,
+                easing: 'easeOutQuad',
+                complete: () => {
+                    alert.style.display = 'none';
+                    alert.style.opacity = '1';
+                    alert.style.transform = 'translateY(0)';
+                }
+            });
+        });
+    });
+}
+
+function showAlert(alertId, duration = 5000) {
+    const alert = document.getElementById(alertId);
+    if (!alert) return;
+    
+    alert.style.display = 'flex';
+    anime({
+        targets: alert,
+        opacity: [0, 1],
+        translateY: [-20, 0],
+        duration: 300,
+        easing: 'easeOutQuad'
+    });
+    
+    const timer = alert.querySelector('.alert-timer');
+    if (timer) {
+        anime({
+            targets: timer,
+            width: ['100%', '0%'],
+            duration: duration,
+            easing: 'linear'
+        });
+    }
+    
+    if (duration > 0) {
+        setTimeout(() => {
+            anime({
+                targets: alert,
+                opacity: 0,
+                translateY: -20,
+                duration: 300,
+                easing: 'easeOutQuad',
+                complete: () => {
+                    alert.style.display = 'none';
+                }
+            });
+        }, duration);
+    }
+}
+
+/* ================== CONTROL DE JOYSTICKS ================== */
+function initJoysticks() {
+    const joystickVitrectomo = document.getElementById('joystick-vitrectomo');
+    initJoystick(joystickVitrectomo, (x, y) => {
+        vitrectomoJoystickX = x;
+        vitrectomoJoystickY = y;
+        updateInstrumentPosition(x, y);
+        updateMiniLeftLine(x, y); // Actualizar línea izquierda del mini mapa
+    });
+    
+    const joystickLight = document.getElementById('joystick-light');
+    initJoystick(joystickLight, (x, y) => {
+        lightJoystickX = x;
+        lightJoystickY = y;
+        updateEndoLightEffect(x, y);
+        updateMiniRightLine(x, y); // Actualizar línea derecha del mini mapa
+    });
+}
+
+function initJoystick(joystickElement, updateCallback) {
+    const handle = joystickElement.querySelector('.joystick-handle');
+    const rect = joystickElement.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const maxDistance = rect.width / 2;
+    let isTouching = false;
+    
+    function handleStart(e) {
+        e.preventDefault();
+        isTouching = true;
+        handleMove(e);
+    }
+    
+    function handleMove(e) {
+        if (!isTouching) return;
+        
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        
+        if(!clientX || !clientY) return;
+        
+        const bounds = joystickElement.getBoundingClientRect();
+        const x = clientX - bounds.left;
+        const y = clientY - bounds.top;
+        
+        let deltaX = x - centerX;
+        let deltaY = y - centerY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        if (distance > maxDistance) {
+            const angle = Math.atan2(deltaY, deltaX);
+            deltaX = Math.cos(angle) * maxDistance;
+            deltaY = Math.sin(angle) * maxDistance;
+        }
+        
+        handle.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        
+        const normalizedX = ((deltaX + maxDistance) / (2 * maxDistance)) * 100;
+        const normalizedY = ((deltaY + maxDistance) / (2 * maxDistance)) * 100;
+        
+        updateCallback(normalizedX, normalizedY);
+    }
+    
+    function handleEnd() {
+        isTouching = false;
+        handle.style.transform = `translate(0px, 0px)`;
+        updateCallback(50, 50);
+    }
+    
+    // Eventos táctiles
+    joystickElement.addEventListener('touchstart', handleStart, { passive: false });
+    joystickElement.addEventListener('touchmove', handleMove, { passive: false });
+    joystickElement.addEventListener('touchend', handleEnd);
+    
+    // Eventos de ratón
+    joystickElement.addEventListener('mousedown', handleStart);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+}
+
+/* ================== ACTUALIZACIÓN DE POSICIONES ================== */
+function updateInstrumentPositions() {
+    updateInstrumentPosition(vitrectomoJoystickX, vitrectomoJoystickY);
+    requestAnimationFrame(updateInstrumentPositions);
+}
+
+function updateInstrumentPosition(normX, normY) {
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    const base = document.getElementById('instrument-base');
+    const tip = document.getElementById('instrument-tip');
+    
+    const maxOffset = retinaRect.width * 0.4;
+    const offsetX = (normX - 50) / 50 * maxOffset;
+    const offsetY = (normY - 50) / 50 * maxOffset;
+    
+    const tipX = retinaRect.width / 2 + offsetX;
+    const tipY = retinaRect.height / 2 + offsetY;
+    
+    tip.style.left = tipX + 'px';
+    tip.style.top = tipY + 'px';
+    
+    updateInstrumentRod();
+    tip.style.transform = `translateZ(${currentDepth}px)`;
+    updateDepthIndicator();
+    
+    if (activeInstrument === 'peeling' && mliPeelingStarted) {
+        updateMliFlapsPosition(tipX, tipY);
+    }
+}
+
+function updateMiniLeftLine(normX, normY) {
+    const defaultTipX = 350;
+    const defaultTipY = 300;
+    const scaleX = 2.5;
+    const scaleY = 1.8;
+    const offsetX = (normX - 50) * scaleX;
+    const offsetY = (normY - 50) * scaleY;
+    let tipX = defaultTipX + offsetX;
+    let tipY = defaultTipY + offsetY;
+    
+    const miniLeft = document.getElementById('probeLight');
+    const miniLeftInner = document.getElementById('probeLightInner');
+    if(miniLeft && miniLeftInner) {
+        miniLeft.setAttribute('x2', tipX);
+        miniLeftInner.setAttribute('x2', tipX);
+        miniLeft.setAttribute('y2', tipY);
+        miniLeftInner.setAttribute('y2', tipY);
+    }
+}
+
+function updateMiniRightLine(normX, normY) {
+    const defaultTipX = 450;
+    const defaultTipY = 300;
+    const scaleX = 2.5;
+    const scaleY = 1.8;
+    const offsetX = (normX - 50) * scaleX;
+    const offsetY = (normY - 50) * scaleY;
+    let tipX = defaultTipX + offsetX;
+    let tipY = defaultTipY + offsetY;
+    
+    const miniRight = document.getElementById('probeForceps');
+    const miniRightInner = document.getElementById('probeForcepsInner');
+    if(miniRight && miniRightInner) {
+        miniRight.setAttribute('x2', tipX);
+        miniRightInner.setAttribute('x2', tipX);
+        miniRight.setAttribute('y2', tipY);
+        miniRightInner.setAttribute('y2', tipY);
+    }
+}
+
+function updateDepthIndicator() {
+    const depthIndicator = document.getElementById('depth-indicator');
+    
+    if (currentDepth > -80) {
+        depthIndicator.textContent = "Profundidad: Superficial";
+        depthIndicator.style.setProperty('--depth-color', '#3b82f6');
+    } else if (currentDepth > -150) {
+        depthIndicator.textContent = "Profundidad: Media";
+        depthIndicator.style.setProperty('--depth-color', '#10b981');
+    } else {
+        depthIndicator.textContent = "Profundidad: Profunda";
+        depthIndicator.style.setProperty('--depth-color', '#ef4444');
+    }
+}
+
+function updateEndoLightEffect(normX, normY) {
+    document.documentElement.style.setProperty('--light-x', normX + '%');
+    document.documentElement.style.setProperty('--light-y', normY + '%');
+    
+    const zVal = parseInt(document.getElementById('endo-z-slider').value);
+    const retinaRect = document.getElementById('retina').getBoundingClientRect();
+    const newLightSize = 20 + (retinaRect.width - 20) * (zVal / 200);
+    
+    document.documentElement.style.setProperty('--light-size', newLightSize + 'px');
+    document.getElementById('light-reflection').style.opacity = 0.7;
+    
+    if (zVal > 100) {
+        document.getElementById('light-scatter').classList.add('active');
+        document.getElementById('specular-highlight').classList.add('active');
+    } else {
+        document.getElementById('light-scatter').classList.remove('active');
+        document.getElementById('specular-highlight').classList.remove('active');
+    }
+}
+
+/* ================== GESTIÓN DE INSTRUMENTOS ================== */
+function setupEventListeners() {
+    document.getElementById('btn-vitrectomo').addEventListener('click', () => toggleInstrument('btn-vitrectomo', 'vitrectomo'));
+    document.getElementById('btn-peeling').addEventListener('click', () => {
+        window.location.href = 'app5.html';
+    });
+    document.getElementById('btn-colorante').addEventListener('click', () => toggleInstrument('btn-colorante', 'colorante'));
+    document.getElementById('btn-sf6').addEventListener('click', () => toggleInstrument('btn-sf6', 'sf6'));
+    
+    document.getElementById('sf6-slider').addEventListener('input', function() {
+        if (procedureStep === 3) {
+            sf6Level = parseInt(this.value);
+            document.getElementById('sf6-value').textContent = `${sf6Level}%`;
+            
+            if (Math.abs(sf6Level - 18) < 2 && !this._alertShown) {
+                showAlert('sf6-adjust-alert');
+                this._alertShown = true;
+            } else if (Math.abs(sf6Level - 18) >= 2) {
+                this._alertShown = false;
+            }
+        }
+    });
+    
+    const actionButton = document.getElementById('btn-precionar');
+    actionButton.addEventListener('mousedown', startAction);
+    actionButton.addEventListener('mouseup', stopAction);
+    actionButton.addEventListener('mouseleave', stopAction);
+    
+    actionButton.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        startAction();
+    }, { passive: false });
+    
+    actionButton.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        stopAction();
+    });
+    
+    document.getElementById('vitrectomo-z-slider').addEventListener('input', function() {
+        currentDepth = parseInt(this.value);
+        updateInstrumentPosition(vitrectomoJoystickX, vitrectomoJoystickY);
+    });
+    
+    document.getElementById('endo-z-slider').addEventListener('input', function() {
+        updateEndoLightEffect(lightJoystickX, lightJoystickY);
+    });
+}
+
+/* ================== EFECTO DE BURBUJAS SF6 ================== */
+
+function createSF6Bubbles() {
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    const instrumentTip = document.getElementById('instrument-tip');
+    const tipRect = instrumentTip.getBoundingClientRect();
+    
+    // Tamaño de la retina central
+    const retinaSize = Math.min(retinaRect.width, retinaRect.height);
+    
+    // Crear 8-12 burbujas medianas
+    const bubbleCount = 8 + Math.floor(Math.random() * 5);
+    
+    for (let i = 0; i < bubbleCount; i++) {
+        const bubble = document.createElement('div');
+        bubble.className = 'sf6-bubble';
+        
+        // Tamaño mediano (1/6 a 1/4 de la retina)
+        const size = retinaSize * (0.16 + Math.random() * 0.08);
+        bubble.style.width = `${size}px`;
+        bubble.style.height = `${size}px`;
+        
+        // Estilo de burbuja: borde azul, centro transparente
+        bubble.style.background = 'transparent';
+        bubble.style.border = '3px solid rgba(0, 120, 255, 0.7)';
+        bubble.style.boxShadow = '0 0 10px rgba(80, 180, 255, 0.5)';
+        
+        // Posición inicial en la punta del instrumento
+        const x = (tipRect.left - retinaRect.left) + tipRect.width/2 - size/2;
+        const y = (tipRect.top - retinaRect.top) + tipRect.height/2 - size/2;
+        
+        bubble.style.left = `${x}px`;
+        bubble.style.top = `${y}px`;
+        
+        // Animación de expansión en todas direcciones
+        const duration = 3 + Math.random() * 2; // 3-5 segundos
+        
+        // Dirección aleatoria en 360 grados (convertida a coordenadas X/Y)
+        const angle = Math.random() * Math.PI * 2;
+        const distance = retinaSize * 0.5; // Media retina de distancia
+        const targetX = Math.cos(angle) * distance;
+        const targetY = Math.sin(angle) * distance;
+        
+        // Keyframes dinámicos
+        const keyframes = `
+            @keyframes bubble-expand-${i} {
+                0% {
+                    transform: translate(0, 0) scale(0.7);
+                    opacity: 0.8;
+                }
+                100% {
+                    transform: translate(${targetX}px, ${targetY}px) scale(1.1);
+                    opacity: 0;
+                }
+            }
+        `;
+        
+        const style = document.createElement('style');
+        style.innerHTML = keyframes;
+        document.head.appendChild(style);
+        
+        bubble.style.animation = `bubble-expand-${i} ${duration}s ease-out forwards`;
+        
+        retina.appendChild(bubble);
+        
+        // Eliminar después de la animación
+        setTimeout(() => {
+            bubble.remove();
+            style.remove();
+        }, duration * 1000);
+    }
+}
+
+/* ================== ACTUALIZACIÓN DEL SLIDER SF6 ================== */
+document.getElementById('sf6-slider').addEventListener('input', function() {
+    sf6Level = parseInt(this.value);
+    document.getElementById('sf6-value').textContent = `${sf6Level}%`;
+    
+    // Mostrar alerta al llegar al 18% y crear burbujas
+    if (Math.abs(sf6Level - 18) < 2 && !this._alertShown) {
+        showAlert('sf6-adjust-alert');
+        this._alertShown = true;
+        createSF6Bubbles(); // <-- Aquí se activan las burbujas al alcanzar ~18%
+    } else if (Math.abs(sf6Level - 18) >= 2) {
+        this._alertShown = false;
+    }
+});     
+        // Eliminar después de la animación
+        setTimeout(() => {
+            bubble.remove();
+            style.remove();
+        }, duration * 1000);
+    
+function startAction() {
+    if (!activeInstrument) return;
+    
+    isActionButtonPressed = true;
+    const actionIndicator = document.getElementById('instrument-action-indicator');
+    
+    if (actionIndicator) {
+        actionIndicator.classList.add('active');
+        
+        if (activeInstrument === 'sf6') {
+            // Solo funciona si SF6 está entre 16% y 20%
+            if (Math.abs(sf6Level - 18) > 2) {
+                console.log("Nivel de SF6 debe ser ~18%");
+                return;
+            }
+
+            actionIndicator.textContent = `Inyectando SF6 (${sf6PressCount+1}/5)`;
+            createSF6Bubbles(); // <-- Aquí se crean burbujas al presionar el botón
+            
+            sf6PressCount++;
+            if (sf6PressCount >= 5) {
+                showAlert('surgery-complete-alert');
+                sf6PressCount = 0;
+            }
+        }
+
+        if (activeInstrument === 'vitrectomo') {
+            actionIndicator.textContent = procedureStep === 1 ? "Removiendo colorante" : "Vitrectomía";
+            startVitrectomyEffect();
+        } 
+        else if (activeInstrument === 'colorante') {
+            actionIndicator.textContent = "Aplicando colorante";
+            applyDye();
+        }
+        else if (activeInstrument === 'sf6') {
+            actionIndicator.textContent = "Inyectando SF6";
+            sf6PressCount++;
+            if (sf6PressCount >= 5) {
+                showAlert('surgery-complete-alert');
+            }
+        }
+        else if (activeInstrument === 'peeling') {
+            actionIndicator.textContent = "Peeling MLI";
+            startPeeling();
+        }
+    }
+}
+
+function stopAction() {
+    isActionButtonPressed = false;
+    
+    const actionIndicator = document.getElementById('instrument-action-indicator');
+    if (actionIndicator) {
+        actionIndicator.classList.remove('active');
+    }
+    
+    if (vitrectomyInterval) {
+        clearInterval(vitrectomyInterval);
+        vitrectomyInterval = null;
+    }
+}
+
+function startVitrectomyEffect() {
+    if (vitrectomyInterval) return;
+    
+    vitrectomyInterval = setInterval(() => {
+        if (!isActionButtonPressed || !activeInstrument) {
+            clearInterval(vitrectomyInterval);
+            return;
+        }
+        
+        const retina = document.getElementById('retina');
+        const retinaRect = retina.getBoundingClientRect();
+        const tip = document.getElementById('instrument-tip');
+        const tipRect = tip.getBoundingClientRect();
+        
+        const x = tipRect.left + tipRect.width/2;
+        const y = tipRect.top + tipRect.height/2;
+        
+        createVitrectomyEffect(x, y);
+        
+        if (procedureStep === 0) {
+            vitreousRemoved = Math.min(100, vitreousRemoved + 0.5);
+            document.getElementById('vitreous-value').textContent = `${Math.round(vitreousRemoved)}%`;
+            document.getElementById('vitreous-level').style.width = `${vitreousRemoved}%`;
+            updateVitreousOpacity();
+            
+            if (vitreousRemoved >= 100) {
+                procedureStep = 1;
+                document.getElementById('btn-vitrectomo').classList.remove('active');
+                document.getElementById('btn-colorante').classList.add('active');
+                activeInstrument = 'colorante';
+                updateInstrumentTipAppearance();
+                showAlert('vitreous-removed-alert');
+            }
+        }
+        else if (procedureStep === 1) {
+            dyeRemoved = Math.min(100, dyeRemoved + 0.5);
+            document.getElementById('dye-removed-value').textContent = `${Math.round(dyeRemoved)}%`;
+            document.getElementById('dye-removed-level').style.width = `${dyeRemoved}%`;
+            
+            const fullDye = document.getElementById('full-dye');
+            fullDye.style.opacity = (1 - (dyeRemoved / 100)) * 0.7;
+            
+            createDyeRemovalParticles(x, y);
+            
+            if (dyeRemoved >= 100) {
+                procedureStep = 2;
+                document.querySelector('.mli-layer').classList.add('visible');
+                showAlert('dye-removed-alert');
+            }
+        }
+        
+        updateVitals();
+    }, 100);
+}
+
+function applyDye() {
+    actionPressCount++;
+    
+    const tip = document.getElementById('instrument-tip');
+    const tipRect = tip.getBoundingClientRect();
+    createDyeWave(tipRect.left + tipRect.width/2, tipRect.top + tipRect.height/2);
+    
+    const newOpacity = Math.min(1, actionPressCount * 0.33);
+    document.getElementById('full-dye').style.opacity = newOpacity;
+    
+    if (newOpacity >= 1) {
+        document.querySelector('.mli-layer').classList.add('visible');
+    }
+    
+    if (actionPressCount >= 3) {
+        document.getElementById('btn-colorante').classList.remove('active');
+        document.getElementById('btn-vitrectomo').classList.add('active');
+        activeInstrument = 'vitrectomo';
+        updateInstrumentTipAppearance();
+        actionPressCount = 0;
+    }
+}
+
+function startPeeling() {
+    document.querySelector('.mli-layer').classList.add('visible');
+    
+    if (!mliPeelingStarted) {
+        mliPeelingStarted = true;
+        createInitialMliFlap();
+    }
+    
+    const tip = document.getElementById('instrument-tip');
+    const tipRect = tip.getBoundingClientRect();
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    
+    const tipX = tipRect.left + tipRect.width/2 - retinaRect.left;
+    const tipY = tipRect.top + tipRect.height/2 - retinaRect.top;
+    
+    const centerX = retinaRect.width/2;
+    const centerY = retinaRect.height/2;
+    const distance = Math.sqrt(Math.pow(tipX - centerX, 2) + Math.pow(tipY - centerY, 2));
+    const radius = retinaRect.width * 0.2;
+    
+    if (Math.abs(distance - radius) < 20) {
+        peelingProgress = Math.min(100, peelingProgress + 1);
+        createMliFlap(tipX, tipY);
+        
+        const mliOpacity = 1 - (peelingProgress / 100);
+        document.querySelector('.mli-layer').style.opacity = mliOpacity;
+        
+        if (peelingProgress >= 100) {
+            procedureStep = 3;
+            document.getElementById('btn-peeling').classList.remove('active');
+            document.getElementById('btn-sf6').classList.add('active');
+            activeInstrument = 'sf6';
+            updateInstrumentTipAppearance();
+            document.querySelector('.mli-layer').classList.remove('visible');
+            document.getElementById('sf6-control').style.display = 'block';
+            showAlert('peeling-complete-alert');
+            setTimeout(() => showAlert('sf6-adjust-alert'), 1500);
+        }
+    }
+}
+
+function createVitrectomyEffect(x, y) {
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    
+    const effect = document.createElement('div');
+    effect.className = 'vitrectomy-effect';
+    effect.style.left = (x - retinaRect.left - 30) + 'px';
+    effect.style.top = (y - retinaRect.top - 30) + 'px';
+    
+    anime({
+        targets: effect,
+        scale: [0, 1],
+        opacity: [0.8, 0],
+        duration: 800,
+        easing: 'easeOutQuad',
+        complete: () => effect.remove()
+    });
+    
+    retina.appendChild(effect);
+    
+    for (let i = 0; i < 8; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'suction-particle';
+        particle.style.left = (x - retinaRect.left + (Math.random()*20 - 10)) + 'px';
+        particle.style.top = (y - retinaRect.top + (Math.random()*20 - 10)) + 'px';
+        
+        anime({
+            targets: particle,
+            translateX: Math.random() * 40 - 20,
+            translateY: Math.random() * 40 - 20,
+            opacity: [1, 0],
+            duration: 1500,
+            easing: 'easeOutQuad',
+            complete: () => particle.remove()
+        });
+        
+        retina.appendChild(particle);
+    }
+}
+
+function createDyeWave(x, y) {
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    
+    const wave = document.createElement('div');
+    wave.className = 'dye-wave';
+    wave.style.left = (x - retinaRect.left) + 'px';
+    wave.style.top = (y - retinaRect.top) + 'px';
+    
+    anime({
+        targets: wave,
+        width: ['10px', '300px'],
+        height: ['10px', '300px'],
+        opacity: [0.8, 0],
+        duration: 1500,
+        easing: 'easeOutQuad',
+        complete: () => wave.remove()
+    });
+    
+    retina.appendChild(wave);
+}
+
+function createDyeRemovalParticles(x, y) {
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    
+    for (let i = 0; i < 3; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'dye-particle';
+        particle.style.left = (x - retinaRect.left + (Math.random()*20 - 10)) + 'px';
+        particle.style.top = (y - retinaRect.top + (Math.random()*20 - 10)) + 'px';
+        
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 30 + Math.random() * 50;
+        const targetX = Math.cos(angle) * distance;
+        const targetY = Math.sin(angle) * distance;
+        
+        anime({
+            targets: particle,
+            translateX: targetX,
+            translateY: targetY,
+            opacity: [1, 0],
+            duration: 1500,
+            easing: 'easeOutQuad',
+            complete: () => particle.remove()
+        });
+        
+        retina.appendChild(particle);
+    }
+}
+
+function createInitialMliFlap() {
+    const retina = document.getElementById('retina');
+    const retinaRect = retina.getBoundingClientRect();
+    const centerX = retinaRect.width / 2;
+    const centerY = retinaRect.height / 2;
+    
+    const flap = document.createElement('div');
+    flap.className = 'mli-flap';
+    flap.style.width = '30px';
+    flap.style.height = '30px';
+    flap.style.left = `${centerX - 15}px`;
+    flap.style.top = `${centerY - 15}px`;
+    flap.style.borderRadius = '50%';
+    flap.style.transform = 'translateZ(10px)';
+    
+    retina.appendChild(flap);
+    mliFlaps.push(flap);
+}
+
+function createMliFlap(x, y) {
+    const retina = document.getElementById('retina');
+    
+    const flap = document.createElement('div');
+    flap.className = 'mli-flap';
+    const size = 10 + Math.random() * 10;
+    flap.style.width = `${size}px`;
+    flap.style.height = `${size}px`;
+    flap.style.left = `${x - size/2 + (Math.random() * 20 - 10)}px`;
+    flap.style.top = `${y - size/2 + (Math.random() * 20 - 10)}px`;
+    flap.style.transform = `translateZ(${5 + Math.random() * 15}px)`;
+    flap.style.opacity = 0.7 - (peelingProgress / 200);
+    
+    retina.appendChild(flap);
+    mliFlaps.push(flap);
+}
+
+function updateMliFlapsPosition(tipX, tipY) {
+    mliFlaps.forEach(flap => {
+        const flapRect = flap.getBoundingClientRect();
+        const flapCenterX = flapRect.left + flapRect.width/2;
+        const flapCenterY = flapRect.top + flapRect.height/2;
+        
+        const distanceX = tipX - flapCenterX;
+        const distanceY = tipY - flapCenterY;
+        const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+        
+        if (distance < 50) {
+            anime({
+                targets: flap,
+                translateX: `+=${distanceX * 0.1}`,
+                translateY: `+=${distanceY * 0.1}`,
+                duration: 100,
+                easing: 'linear'
+            });
+        }
+    });
+}
+
+function toggleInstrument(btnId, instrumentType) {
+    const btn = document.getElementById(btnId);
+    
+    if(btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        activeInstrument = null;
+        isActionButtonPressed = false;
+        
+        const tip = document.getElementById('instrument-tip');
+        tip.className = 'instrument-tip';
+        tip.classList.remove('grasping');
+    } else {
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        
+        btn.classList.add('active');
+        activeInstrument = instrumentType;
+        updateInstrumentTipAppearance();
+        
+        if (instrumentType === 'sf6') {
+            document.getElementById('sf6-control').style.display = 'block';
+        } else {
+            document.getElementById('sf6-control').style.display = 'none';
+        }
+    }
+}
+
+function updateInstrumentTipAppearance() {
+    const tip = document.getElementById('instrument-tip');
+    tip.className = 'instrument-tip';
+    
+    if (activeInstrument === 'vitrectomo') {
+        tip.classList.add('active-vitrectomo');
+    } else if (activeInstrument === 'sf6') {
+        tip.classList.add('active-sf6');
+    } else if (activeInstrument === 'peeling') {
+        tip.classList.add('active-forceps');
+        tip.classList.add('grasping');
+    } else if (activeInstrument === 'colorante') {
+        tip.classList.add('active-colorante');
+    }
+}
+
+/* ================== ACTUALIZACIÓN DE PARÁMETROS ================== */
+function updateVitals() {
+    iop += (Math.random() - 0.5) * 0.1;
+    perfusion += (Math.random() - 0.5) * 0.2;
+    
+    if (activeInstrument === 'vitrectomo') {
+        iop -= 0.05;
+    }
+    
+    if (sf6Level > 0) {
+        iop = Math.max(iop, 12 + sf6Level / 20);
+        perfusion = Math.min(perfusion + sf6Level / 100, 100);
+    }
+    
+    iop = Math.max(10, Math.min(30, iop));
+    perfusion = Math.max(60, Math.min(100, perfusion));
+    
+    document.getElementById('iop-value').innerText = iop.toFixed(1) + " mmHg";
+    document.getElementById('iop-level').style.width = ((iop - 10) / 20 * 100) + "%";
+    document.getElementById('perfusion-value').innerText = perfusion.toFixed(0) + "%";
+    document.getElementById('perfusion-level').style.width = perfusion + "%";
+    
+    const iopElement = document.getElementById('iop-value');
+    iopElement.classList.remove('normal', 'warning', 'danger');
+    
+    if(iop < 15 || iop > 25) {
+        iopElement.classList.add('danger');
+        retinaStatus = 'Riesgo';
+    } else if(iop < 18 || iop > 22) {
+        iopElement.classList.add('warning');
+        retinaStatus = 'Alerta';
+    } else {
+        iopElement.classList.add('normal');
+        retinaStatus = 'Estable';
+    }
+    
+    const retinaStatusElement = document.getElementById('retina-status');
+    retinaStatusElement.innerText = retinaStatus;
+    retinaStatusElement.className = `vital-value ${iopElement.className.split(' ')[1]}`;
+    
+    if(perfusion < 70) {
+        retinaStatusElement.classList.remove('normal', 'warning');
+        retinaStatusElement.classList.add('danger');
+        retinaStatus = 'Isquemia';
+    } else if(perfusion < 85) {
+        retinaStatusElement.classList.remove('normal', 'danger');
+        retinaStatusElement.classList.add('warning');
+        retinaStatus = 'Hipoperfusión';
+    }
+    
+    setTimeout(updateVitals, 1000);
+}
+
+function createVitreous() {
+    const vitreous = document.getElementById('vitreous');
+    vitreous.style.opacity = 1;
+}
+
+function updateVitreousOpacity() {
+    const vitreous = document.getElementById('vitreous');
+    vitreous.style.opacity = 1 - (vitreousRemoved / 100);
+}
+  </script>
+</body>
+</html>

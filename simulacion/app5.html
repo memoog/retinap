@@ -1,0 +1,2429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulación Avanzada de Peeling de Membrana</title>
+  
+  <style>
+  /* Instrument styling - Mejorado para realismo */
+    .instrument-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .instrument-base {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: 
+        radial-gradient(circle at 30% 30%, 
+          #777 0%, 
+          #555 20%, 
+          #333 60%, 
+          #222 100%);
+      bottom: 20px;
+      right: 20px;
+      box-shadow: 
+        0 0 15px rgba(0, 0, 0, 0.7),
+        2px -2px 4px rgba(255, 255, 255, 0.2) inset,
+        -2px 2px 4px rgba(0, 0, 0, 0.5) inset;
+      z-index: 19;
+      border: 1px solid #444;
+    }
+
+    .instrument-base::after {
+      content: '';
+      position: absolute;
+      width: 60%;
+      height: 60%;
+      border-radius: 50%;
+      top: 20%;
+      left: 20%;
+      background: radial-gradient(circle at 40% 40%, 
+        rgba(255, 255, 255, 0.15) 0%, 
+        transparent 70%);
+      filter: blur(1px);
+    }
+
+    .instrument-base-shadow {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.4);
+      bottom: 17px;
+      right: 23px;
+      transform: translate(35px, -35px);
+      z-index: 18;
+      filter: blur(3px);
+    }
+
+    .instrument-rod {
+      position: absolute;
+      height: 10px;
+      background: 
+        linear-gradient(90deg, 
+          #aaa 0%, 
+          #ccc 20%, 
+          #ddd 50%, 
+          #aaa 80%, 
+          #888 100%);
+      border-radius: 5px;
+      transform-origin: left center;
+      z-index: 20;
+      box-shadow: 
+        0 0 10px rgba(0, 0, 0, 0.5),
+        0 0 2px rgba(255, 255, 255, 0.3) inset;
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #666;
+    }
+
+    .instrument-rod::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.3) 0%, 
+        rgba(255, 255, 255, 0.1) 100%);
+      border-radius: 5px 5px 0 0;
+    }
+
+    .instrument-rod-shadow {
+      position: absolute;
+      height: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 5px;
+      transform-origin: left center;
+      z-index: 19;
+      filter: blur(3px);
+    }
+
+    .instrument-tip {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: 
+        radial-gradient(circle at 30% 30%, 
+          #ddd 0%, 
+          #aaa 30%, 
+          #888 70%, 
+          #666 100%);
+      z-index: 21;
+      box-shadow: 
+        0 0 10px rgba(0, 0, 0, 0.5),
+        2px -2px 4px rgba(255, 255, 255, 0.3) inset,
+        -2px 2px 4px rgba(0, 0, 0, 0.3) inset;
+      transform: translate(-50%, -50%);
+      border: 1px solid #999;
+    }
+
+    .instrument-tip::before {
+      content: '';
+      position: absolute;
+      width: 40%;
+      height: 40%;
+      border-radius: 50%;
+      top: 15%;
+      left: 15%;
+      background: radial-gradient(circle at 50% 50%, 
+        rgba(255, 255, 255, 0.6) 0%, 
+        transparent 70%);
+      filter: blur(1px);
+    }
+
+    .instrument-tip::after {
+      content: '';
+      position: absolute;
+      width: 60%;
+      height: 60%;
+      border-radius: 50%;
+      bottom: 10%;
+      right: 10%;
+      background: radial-gradient(circle at 70% 70%, 
+        rgba(0, 0, 0, 0.3) 0%, 
+        transparent 70%);
+    }
+
+    .instrument-tip-shadow {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 20;
+      filter: blur(3px);
+      transform: translate(-50%, -50%);
+    }
+
+
+    /* Estilo para el contenedor del botón accionar */
+#action-button-container {
+  position: absolute;
+  bottom: 200px;
+  left: 30px;
+  width: 200px;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 50, 100, 0.3);
+  border-radius: 50%;
+  border: 1px solid rgba(100, 200, 255, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+#btn-precionar {
+  padding: 15px 25px;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #0066cc, #0044aa);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(0, 100, 255, 0.3);
+  width: 100%;
+  text-align: center;
+}
+
+#btn-precionar:hover {
+  background: linear-gradient(135deg, #0088ff, #0066cc);
+  transform: scale(1.05);
+}
+
+#btn-precionar:active, #btn-precionar.keyboard-active {
+  background: linear-gradient(135deg, #cc3300, #aa2200);
+  transform: scale(0.95);
+}
+  /* Alertas de pantalla completa */
+  .fullscreen-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    color: white;
+    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .fullscreen-alert h2 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: #ff5555;
+  }
+  
+  .fullscreen-alert p {
+    font-size: 1.5rem;
+    margin-bottom: 3rem;
+    max-width: 80%;
+  }
+  
+  .fullscreen-alert button {
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    background: linear-gradient(135deg, #0066cc, #0044aa);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .fullscreen-alert button:hover {
+    background: linear-gradient(135deg, #0088ff, #0066cc);
+    transform: scale(1.05);
+  }
+  
+  .fullscreen-alert button:hover {
+    background: linear-gradient(135deg, #0088ff, #0066cc);
+    transform: scale(1.05);
+  }
+  
+  .success-alert h2 {
+    color: #4CAF50;
+  }
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      background: #001720; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #eye-canvas { 
+      display: block; 
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, #e55a04 0%, #b24f03 40%, #8a3b02 100%);
+      border-radius: 50%;
+      box-shadow: 
+        inset 0 0 80px rgba(0, 0, 0, 0.9),
+        0 0 60px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+    }
+    #tool-panel {
+      position: absolute; 
+      bottom: 20px; 
+      left: 50%; 
+      transform: translateX(-50%);
+      background: rgba(0, 20, 40, 0.9); 
+      padding: 15px 25px; 
+      border-radius: 20px;
+      display: flex; 
+      gap: 15px; 
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(100, 200, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    button {
+      padding: 12px 24px; 
+      background: linear-gradient(135deg, #0066cc, #0044aa);
+      color: white; 
+      border: none; 
+      border-radius: 10px; 
+      cursor: pointer;
+      font-weight: 600; 
+      transition: all 0.3s ease; 
+      box-shadow: 0 4px 15px rgba(0, 100, 255, 0.3);
+      font-size: 16px;
+      min-width: 180px;
+    }
+    button:hover { 
+      background: linear-gradient(135deg, #0088ff, #0066cc); 
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 150, 255, 0.4);
+    }
+    button.active { 
+      background: linear-gradient(135deg, #cc3300, #aa2200); 
+      box-shadow: 0 0 25px rgba(255, 80, 80, 0.7); 
+    }
+    .instructions {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 20, 40, 0.85);
+      color: #fff;
+      padding: 15px 25px;
+      border-radius: 15px;
+      text-align: center;
+      max-width: 80%;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(100, 200, 255, 0.25);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      font-size: 14px;
+      line-height: 1.5;
+      display: none;
+      z-index: 5;
+    }
+    #score-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 20, 40, 0.85);
+      color: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(100, 200, 255, 0.25);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      font-size: 14px;
+      z-index: 5;
+    }
+    #blood-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    .warning {
+      color: #ff5555;
+      font-weight: bold;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+    #oct-display {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 300px;
+      height: 180px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 5px;
+      border: 1px solid #0099ff;
+      overflow: hidden;
+      z-index: 10;
+    }
+    #oct-canvas {
+      width: 100%;
+      height: 100%;
+    }
+    #metrics-panel {
+      position: absolute;
+      top: 220px;
+      left: 20px;
+      background: rgba(0, 20, 40, 0.85);
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 10px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(100, 200, 255, 0.25);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      font-size: 12px;
+      z-index: 5;
+    }
+    
+    /* Estilos para los joysticks */
+    .joystick-container {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      background: rgba(0, 50, 100, 0.3);
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(100, 200, 255, 0.2);
+      backdrop-filter: blur(5px);
+      z-index: 20;
+    }
+    
+    #joystick-light-container {
+      bottom: 180px;
+      left: 20px;
+    }
+    
+    #joystick-vitrectomo-container {
+      bottom: 180px;
+      right: 20px;
+    }
+    
+    .joystick {
+      width: 80px;
+      height: 80px;
+      background: rgba(0, 80, 160, 0.3);
+      border-radius: 50%;
+      position: relative;
+      touch-action: none;
+      border: 1px solid rgba(100, 200, 255, 0.3);
+    }
+    
+    .joystick-handle {
+      width: 30px;
+      height: 30px;
+      background: rgba(200, 230, 255, 0.8);
+      border-radius: 50%;
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      touch-action: none;
+      box-shadow: 0 0 10px rgba(100, 200, 255, 0.5);
+    }
+    
+    .slider-container {
+      margin-top: 10px;
+      width: 100%;
+      text-align: center;
+    }
+    
+    .slider-container label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 12px;
+      color: rgba(200, 230, 255, 0.8);
+    }
+    
+    /* Estilos para el instrumento quirúrgico - MEJORADO PARA VISIBILIDAD */
+    .instrument-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 30;
+    }
+    
+    .instrument-rod {
+      position: absolute;
+      height: 8px;
+      background: linear-gradient(to right, #888, #ccc);
+      border-radius: 4px;
+      transform-origin: left center;
+      z-index: 30;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    
+    .instrument-tip {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ccc;
+      z-index: 31;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      transform: translate(-50%, -50%);
+      transition: transform 0.2s ease;
+    }
+    
+    .instrument-tip.active {
+      background: #ffff00;
+      box-shadow: 0 0 15px rgba(255, 255, 0, 0.7);
+    }
+    
+    .instrument-base {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #555;
+      z-index: 29;
+      box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    }
+    
+    /* Botón de acción */
+    #btn-precionar {
+      padding: 6px 12px;
+      background: linear-gradient(135deg, #0066cc, #0044aa);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 5px;
+      font-size: 12px;
+      box-shadow: 0 2px 8px rgba(0, 100, 255, 0.3);
+      transition: all 0.2s;
+    }
+    
+    #btn-precionar:active, #btn-precionar.keyboard-active {
+      background: linear-gradient(135deg, #cc3300, #aa2200);
+      transform: scale(0.95);
+    }
+    
+    /* Control deslizante personalizado */
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: rgba(100, 150, 200, 0.3);
+      border-radius: 3px;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #4CAF50;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    }
+
+    /* Nuevos estilos para el fondo de retina y efectos de sombra */
+    .retina-texture {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 50% 50%, 
+          rgba(255, 255, 255, 0.03) 1px, 
+          transparent 1px);
+      background-size: 20px 20px;
+      z-index: 1;
+    }
+
+    .blood-vessels {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 2;
+    }
+
+    .blood-vessels svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .blood-vessels path {
+      stroke: #6b0000;
+      stroke-width: 1.5;
+      stroke-opacity: 0.7;
+      fill: none;
+      filter: drop-shadow(0 0 2px rgba(107, 0, 0, 0.5));
+    }
+
+    .macula {
+      position: absolute;
+      
+      border-radius: 50%;
+      background: radial-gradient(circle at center,
+        rgba(210, 180, 140, 0.8) 0%,
+        rgba(180, 140, 90, 0.7) 70%,
+        rgba(150, 100, 50, 0.6) 100%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 
+        0 0 30px rgba(210, 180, 140, 0.6),
+        inset 0 0 15px rgba(255, 230, 180, 0.4);
+      z-index: 1;
+    }
+
+    .fovea {
+      position: absolute;
+      width: 5%;
+      height: 5%;
+      border-radius: 50%;
+      background: radial-gradient(circle at center,
+        rgba(150, 100, 50, 0.9) 0%,
+        rgba(120, 70, 30, 0.8) 100%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 
+        inset 0 0 10px rgba(255, 200, 100, 0.5),
+        0 0 5px rgba(255, 180, 80, 0.4);
+      z-index: 4;
+    }
+
+    #light-reflection {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at var(--light-x, 50%) var(--light-y, 50%), 
+        rgba(255, 255, 255, 0.15) 0%, 
+        transparent var(--light-size, 100px)
+      );
+      pointer-events: none;
+      z-index: 6;
+      opacity: 0;
+      transition: opacity 0.3s, background 0.3s;
+    }
+
+    .light-scatter {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at var(--light-x, 50%) var(--light-y, 50%), 
+        rgba(255, 255, 255, 0.08) 0%, 
+        transparent calc(var(--light-size, 100px) * 1.3)
+      );
+      pointer-events: none;
+      z-index: 4;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    .light-scatter.active {
+      opacity: 0.8;
+    }
+
+    .specular-highlight {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at calc(var(--light-x, 50%) + 10%) calc(var(--light-y, 50%) - 10%), 
+        rgba(255, 255, 255, 0.4) 0%, 
+        transparent 70%
+      );
+      pointer-events: none;
+      z-index: 7;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    .specular-highlight.active {
+      opacity: 0.6;
+    }
+
+    /* Efecto de profundidad */
+    .depth-effect {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at center,
+        transparent 0%,
+        rgba(0, 0, 0, 0.4) 70%,
+        rgba(0, 0, 0, 0.7) 100%
+      );
+      z-index: 8;
+      pointer-events: none;
+    }
+
+    
+
+    /* Sombras del instrumento */
+    .instrument-base-shadow {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.8);
+      bottom: 17px;
+      right: 23px;
+      transform: translate(35px, -35px);
+      z-index: 28;
+      filter: blur(4px);
+    }
+
+    .instrument-rod-shadow {
+      position: absolute;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 4px;
+      transform-origin: left center;
+      z-index: 29;
+      filter: blur(4px);
+    }
+
+    .instrument-tip-shadow {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 30;
+      filter: blur(5px);
+      transform: translate(-50%, -50%);
+    }
+    /* Sombra de la luz del endoiluminador */
+    .light-shadow {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 100%;
+      background: radial-gradient(
+        circle at var(--light-x, 50%) var(--light-y, 50%),
+        transparent calc(var(--light-size, 100px) * 0.8),
+        rgba(86, 81, 81, 0.7) calc(var(--light-size, 100px) * 2.5),
+        rgba(0, 0, 0, 0.9) calc(var(--light-size, 100px) * 0.5)
+      );
+      z-index: 2;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Alertas de pantalla completa -->
+<div id="damage-alert" class="fullscreen-alert">
+  <h2>¡Daño Crítico!</h2>
+  <p>Has alcanzado un nivel de daño crítico en la retina. Es necesario reiniciar la simulación.</p>
+  <button id="reset-to-app3-btn">Reiniciar Simulación</button>
+</div>
+
+<div id="success-alert" class="fullscreen-alert success-alert">
+  <h2>¡Membrana Removida!</h2>
+  <p>Has removido exitosamente la membrana. Puedes continuar con la cirugía.</p>
+  <button id="continue-to-app3-btn">Continuar Cirugía</button>
+</div>
+  
+  <!-- Contenedor del ojo con el nuevo fondo -->
+  <div id="eye-canvas">
+    <!-- Textura de retina -->
+    <div class="retina-texture"></div>
+    
+    <!-- Vasos sanguíneos -->
+    <div class="blood-vessels">
+       <svg viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <style type="text/css">
+          .blood-vessel {
+            stroke: #8B0000;
+            stroke-width: 1.5;
+            fill: #8b0808;
+            fill-opacity: 0.7;
+          }
+          .small-details {
+            stroke: #8B0000;
+            stroke-width: 1;
+            fill: none;
+          }
+        </style>
+      </defs>
+      
+      <!-- Vasos sanguíneos principales -->
+      <path d="M 558.00,952.00 L 552.00,938.00 L 538.00,922.00 L 499.00,901.00 L 477.00,882.00 L 448.00,821.00 L 432.00,801.00 L 415.00,791.00 L 366.00,773.00 L 346.00,760.00 L 331.00,745.00 L 317.00,721.00 L 301.00,676.00 L 281.00,651.00 L 301.00,722.00 L 338.00,790.00 L 364.00,863.00 L 368.00,881.00 L 368.00,905.00 L 364.00,923.00 L 361.00,925.00 L 365.00,895.00 L 357.00,857.00 L 331.00,789.00 L 297.00,729.00 L 275.00,654.00 L 260.00,630.00 L 239.00,607.00 L 226.00,585.00 L 218.00,554.00 L 215.00,514.00 L 208.00,544.00 L 210.00,574.00 L 253.00,694.00 L 251.00,721.00 L 236.00,759.00 L 238.00,811.00 L 229.00,837.00 L 227.00,835.00 L 234.00,811.00 L 231.00,757.00 L 246.00,716.00 L 247.00,700.00 L 242.00,677.00 L 205.00,586.00 L 194.00,615.00 L 164.00,653.00 L 154.00,686.00 L 144.00,704.00 L 125.00,723.00 L 110.00,733.00 L 101.00,735.00 L 124.00,720.00 L 141.00,701.00 L 162.00,645.00 L 188.00,614.00 L 196.00,599.00 L 200.00,584.00 L 199.00,544.00 L 207.00,512.00 L 166.00,542.00 L 125.00,561.00 L 83.00,601.00 L 66.00,608.00 L 58.00,607.00 L 82.00,597.00 L 120.00,557.00 L 166.00,534.00 L 205.00,505.00 L 209.00,501.00 L 209.00,482.00 L 203.00,458.00 L 195.00,449.00 L 153.00,424.00 L 124.00,415.00 L 101.00,404.00 L 71.00,382.00 L 116.00,407.00 L 151.00,418.00 L 134.00,393.00 L 122.00,354.00 L 111.00,334.00 L 87.00,310.00 L 57.00,296.00 L 65.00,296.00 L 83.00,304.00 L 115.00,332.00 L 125.00,348.00 L 135.00,381.00 L 149.00,408.00 L 169.00,428.00 L 193.00,442.00 L 177.00,403.00 L 174.00,366.00 L 167.00,345.00 L 154.00,320.00 L 108.00,255.00 L 97.00,227.00 L 92.00,198.00 L 94.00,184.00 L 98.00,216.00 L 108.00,245.00 L 160.00,320.00 L 178.00,360.00 L 180.00,320.00 L 161.00,248.00 L 163.00,210.00 L 176.00,166.00 L 167.00,213.00 L 166.00,246.00 L 186.00,323.00 L 181.00,391.00 L 186.00,412.00 L 210.00,458.00 L 214.00,474.00 L 217.00,450.00 L 209.00,401.00 L 219.00,350.00 L 218.00,282.00 L 229.00,238.00 L 229.00,221.00 L 222.00,193.00 L 222.00,171.00 L 236.00,122.00 L 260.00,84.00 L 236.00,134.00 L 227.00,174.00 L 228.00,194.00 L 235.00,220.00 L 235.00,240.00 L 224.00,283.00 L 225.00,351.00 L 216.00,390.00 L 216.00,416.00 L 223.00,445.00 L 223.00,464.00 L 217.00,496.00 L 229.00,461.00 L 228.00,412.00 L 237.00,388.00 L 267.00,346.00 L 292.00,284.00 L 332.00,238.00 L 353.00,180.00 L 407.00,121.00 L 433.00,73.00 L 426.00,97.00 L 410.00,126.00 L 359.00,182.00 L 337.00,242.00 L 300.00,284.00 L 282.00,330.00 L 307.00,304.00 L 333.00,283.00 L 414.00,236.00 L 432.00,222.00 L 465.00,183.00 L 489.00,135.00 L 504.00,113.00 L 531.00,85.00 L 546.00,74.00 L 548.00,75.00 L 509.00,115.00 L 463.00,198.00 L 433.00,229.00 L 481.00,208.00 L 526.00,173.00 L 545.00,163.00 L 564.00,158.00 L 615.00,158.00 L 651.00,153.00 L 697.00,134.00 L 735.00,123.00 L 750.00,115.00 L 765.00,99.00 L 763.00,106.00 L 742.00,124.00 L 698.00,139.00 L 660.00,156.00 L 698.00,161.00 L 725.00,161.00 L 767.00,154.00 L 764.00,156.00 L 718.00,166.00 L 693.00,166.00 L 649.00,160.00 L 621.00,164.00 L 560.00,166.00 L 528.00,180.00 L 499.00,204.00 L 471.00,220.00 L 522.00,222.00 L 583.00,237.00 L 609.00,235.00 L 653.00,225.00 L 673.00,226.00 L 702.00,238.00 L 729.00,261.00 L 747.00,269.00 L 766.00,273.00 L 798.00,272.00 L 838.00,254.00 L 863.00,250.00 L 867.00,252.00 L 837.00,258.00 L 809.00,273.00 L 791.00,278.00 L 765.00,278.00 L 738.00,271.00 L 764.00,298.00 L 801.00,313.00 L 820.00,334.00 L 830.00,339.00 L 846.00,339.00 L 865.00,330.00 L 885.00,325.00 L 908.00,327.00 L 876.00,330.00 L 843.00,344.00 L 821.00,341.00 L 832.00,357.00 L 851.00,375.00 L 874.00,387.00 L 906.00,398.00 L 921.00,406.00 L 923.00,410.00 L 901.00,399.00 L 867.00,388.00 L 847.00,377.00 L 827.00,358.00 L 801.00,319.00 L 762.00,303.00 L 723.00,262.00 L 688.00,237.00 L 673.00,232.00 L 654.00,231.00 L 606.00,242.00 L 578.00,243.00 L 577.00,242.00 L 568.00,241.00 L 557.00,237.00 L 554.00,237.00 L 550.00,235.00 L 547.00,235.00 L 543.00,233.00 L 540.00,233.00 L 539.00,232.00 L 536.00,232.00 L 535.00,231.00 L 533.00,231.00 L 573.00,262.00 L 616.00,272.00 L 636.00,281.00 L 653.00,299.00 L 672.00,333.00 L 693.00,350.00 L 739.00,362.00 L 759.00,376.00 L 766.00,391.00 L 765.00,396.00 L 759.00,381.00 L 747.00,369.00 L 707.00,359.00 L 720.00,377.00 L 732.00,422.00 L 752.00,456.00 L 756.00,472.00 L 754.00,475.00 L 749.00,455.00 L 726.00,416.00 L 713.00,372.00 L 703.00,361.00 L 681.00,348.00 L 667.00,335.00 L 649.00,303.00 L 636.00,288.00 L 619.00,279.00 L 586.00,273.00 L 567.00,266.00 L 519.00,229.00 L 497.00,226.00 L 464.00,227.00 L 415.00,246.00 L 348.00,284.00 L 408.00,286.00 L 458.00,269.00 L 484.00,272.00 L 496.00,279.00 L 509.00,292.00 L 536.00,342.00 L 547.00,355.00 L 589.00,373.00 L 607.00,384.00 L 657.00,438.00 L 642.00,428.00 L 602.00,385.00 L 555.00,365.00 L 572.00,390.00 L 586.00,436.00 L 599.00,462.00 L 586.00,444.00 L 566.00,388.00 L 533.00,348.00 L 507.00,300.00 L 489.00,282.00 L 468.00,275.00 L 453.00,277.00 L 407.00,293.00 L 351.00,291.00 L 330.00,297.00 L 292.00,331.00 L 262.00,367.00 L 247.00,390.00 L 238.00,410.00 L 237.00,415.00 L 237.00,430.00 L 255.00,407.00 L 300.00,385.00 L 336.00,362.00 L 359.00,353.00 L 388.00,351.00 L 412.00,359.00 L 449.00,387.00 L 470.00,399.00 L 514.00,407.00 L 490.00,408.00 L 467.00,402.00 L 449.00,392.00 L 415.00,366.00 L 397.00,358.00 L 373.00,356.00 L 351.00,361.00 L 325.00,375.00 L 346.00,374.00 L 366.00,381.00 L 409.00,425.00 L 456.00,448.00 L 407.00,429.00 L 364.00,386.00 L 343.00,379.00 L 325.00,380.00 L 264.00,408.00 L 250.00,420.00 L 238.00,443.00 L 238.00,463.00 L 231.00,489.00 L 242.00,487.00 L 270.00,495.00 L 287.00,495.00 L 338.00,474.00 L 392.00,478.00 L 420.00,469.00 L 402.00,479.00 L 390.00,482.00 L 339.00,479.00 L 303.00,496.00 L 285.00,501.00 L 269.00,501.00 L 247.00,494.00 L 234.00,494.00 L 229.00,499.00 L 229.00,510.00 L 239.00,532.00 L 251.00,544.00 L 283.00,566.00 L 360.00,567.00 L 376.00,564.00 L 391.00,557.00 L 434.00,515.00 L 456.00,505.00 L 434.00,519.00 L 402.00,555.00 L 380.00,568.00 L 363.00,572.00 L 311.00,570.00 L 288.00,572.00 L 298.00,588.00 L 314.00,629.00 L 326.00,647.00 L 360.00,679.00 L 384.00,691.00 L 414.00,690.00 L 445.00,676.00 L 461.00,659.00 L 484.00,613.00 L 500.00,599.00 L 525.00,588.00 L 491.00,611.00 L 462.00,667.00 L 446.00,682.00 L 428.00,692.00 L 469.00,699.00 L 503.00,694.00 L 515.00,687.00 L 554.00,644.00 L 596.00,614.00 L 605.00,601.00 L 611.00,584.00 L 612.00,589.00 L 607.00,603.00 L 596.00,619.00 L 557.00,647.00 L 521.00,689.00 L 503.00,700.00 L 486.00,704.00 L 461.00,704.00 L 427.00,697.00 L 388.00,698.00 L 369.00,693.00 L 388.00,723.00 L 409.00,741.00 L 460.00,762.00 L 490.00,779.00 L 512.00,784.00 L 577.00,756.00 L 593.00,742.00 L 602.00,722.00 L 606.00,688.00 L 615.00,673.00 L 628.00,661.00 L 610.00,687.00 L 605.00,729.00 L 594.00,749.00 L 574.00,764.00 L 514.00,790.00 L 547.00,801.00 L 580.00,800.00 L 604.00,791.00 L 654.00,749.00 L 674.00,724.00 L 696.00,665.00 L 697.00,626.00 L 707.00,590.00 L 703.00,545.00 L 706.00,522.00 L 711.00,592.00 L 703.00,622.00 L 703.00,656.00 L 700.00,670.00 L 723.00,644.00 L 769.00,611.00 L 779.00,594.00 L 795.00,542.00 L 808.00,527.00 L 836.00,505.00 L 856.00,471.00 L 880.00,454.00 L 905.00,449.00 L 886.00,455.00 L 866.00,467.00 L 855.00,480.00 L 837.00,512.00 L 805.00,538.00 L 796.00,553.00 L 784.00,597.00 L 776.00,611.00 L 762.00,625.00 L 731.00,645.00 L 714.00,661.00 L 700.00,681.00 L 675.00,735.00 L 659.00,753.00 L 618.00,789.00 L 588.00,805.00 L 549.00,808.00 L 527.00,803.00 L 492.00,788.00 L 519.00,822.00 L 536.00,831.00 L 557.00,836.00 L 601.00,835.00 L 647.00,819.00 L 676.00,803.00 L 711.00,773.00 L 751.00,749.00 L 766.00,731.00 L 791.00,678.00 L 804.00,665.00 L 838.00,642.00 L 856.00,623.00 L 894.00,554.00 L 922.00,530.00 L 968.00,505.00 L 917.00,538.00 L 900.00,554.00 L 888.00,571.00 L 861.00,625.00 L 835.00,652.00 L 796.00,681.00 L 770.00,736.00 L 757.00,752.00 L 793.00,739.00 L 830.00,712.00 L 856.00,699.00 L 876.00,695.00 L 917.00,694.00 L 939.00,685.00 L 960.00,668.00 L 957.00,674.00 L 939.00,689.00 L 921.00,697.00 L 876.00,700.00 L 850.00,707.00 L 795.00,745.00 L 781.00,752.00 L 747.00,761.00 L 725.00,772.00 L 707.00,784.00 L 686.00,803.00 L 685.00,803.00 L 682.00,806.00 L 681.00,806.00 L 675.00,811.00 L 672.00,812.00 L 671.00,813.00 L 684.00,810.00 L 721.00,812.00 L 771.00,832.00 L 801.00,840.00 L 826.00,840.00 L 845.00,834.00 L 847.00,836.00 L 827.00,843.00 L 798.00,844.00 L 776.00,839.00 L 723.00,818.00 L 693.00,815.00 L 663.00,820.00 L 600.00,842.00 L 558.00,843.00 L 544.00,840.00 L 581.00,865.00 L 603.00,876.00 L 624.00,881.00 L 665.00,882.00 L 684.00,887.00 L 742.00,929.00 L 727.00,923.00 L 682.00,891.00 L 664.00,887.00 L 616.00,886.00 L 582.00,873.00 L 518.00,830.00 L 474.00,780.00 L 455.00,769.00 L 421.00,757.00 L 395.00,742.00 L 376.00,722.00 L 348.00,679.00 L 313.00,644.00 L 281.00,578.00 L 270.00,567.00 L 242.00,548.00 L 230.00,535.00 L 223.00,522.00 L 227.00,566.00 L 234.00,587.00 L 252.00,613.00 L 302.00,667.00 L 311.00,684.00 L 324.00,722.00 L 334.00,739.00 L 347.00,753.00 L 366.00,766.00 L 416.00,785.00 L 432.00,794.00 L 453.00,819.00 L 482.00,881.00 L 494.00,893.00 L 537.00,918.00 L 554.00,937.00 L 558.00,952.00" class="blood-vessel" />
+  
+      <!-- Pequeños detalles -->
+      <path d="M 549.00,75.00 L 547.00,74.00 L 550.00,72.00 L 551.00,73.00 L 549.00,75.00" class="small-details" />
+      <path d="M 262.00,84.00 L 261.00,83.00 L 262.00,82.00 L 263.00,83.00 L 262.00,84.00" class="small-details" />
+      <path d="M 261.00,85.00 L 260.00,84.00 L 261.00,83.00 L 262.00,84.00 L 261.00,85.00" class="small-details" />
+      <path d="M 766.00,100.00 L 765.00,99.00 L 766.00,97.00 L 767.00,98.00 L 766.00,100.00" class="small-details" />
+      <path d="M 927.00,413.00 L 926.00,413.00 L 923.00,410.00 L 925.00,409.00 L 927.00,413.00" class="small-details" />
+      <path d="M 929.00,415.00 L 927.00,413.00 L 928.00,412.00 L 930.00,413.00 L 929.00,415.00" class="small-details" />
+      <path d="M 659.00,439.00 L 658.00,439.00 L 657.00,438.00 L 659.00,437.00 L 659.00,439.00" class="small-details" />
+      <path d="M 600.00,463.00 L 599.00,462.00 L 600.00,461.00 L 601.00,462.00 L 600.00,463.00" class="small-details" />
+      <path d="M 420.00,469.00 L 419.00,468.00 L 420.00,467.00 L 421.00,468.00 L 420.00,469.00" class="small-details" />
+      <path d="M 526.00,589.00 L 525.00,588.00 L 526.00,587.00 L 527.00,588.00 L 526.00,589.00" class="small-details" />
+      <path d="M 629.00,662.00 L 628.00,661.00 L 629.00,660.00 L 630.00,661.00 L 629.00,662.00" class="small-details" />
+      <path d="M 99.00,738.00 L 96.00,737.00 L 102.00,736.00 L 100.00,737.00 L 99.00,738.00" class="small-details" />
+      <path d="M 848.00,835.00 L 847.00,834.00 L 848.00,833.00 L 849.00,834.00 L 848.00,835.00" class="small-details" />
+      <path d="M 542.00,839.00 L 542.00,839.00 L 542.00,839.00 L 542.00,839.00 L 542.00,839.00" class="small-details" />
+    </svg>
+    </div>
+    
+    <!-- Estructuras retinales -->
+    <div class="macula"></div>
+    <div class="fovea"></div>
+    
+    <!-- Efectos de iluminación -->
+    <div id="light-mask"></div>
+    <div id="light-reflection"></div>
+    <div id="light-scatter" class="light-scatter"></div>
+    <div id="specular-highlight" class="specular-highlight"></div>
+    <div class="depth-effect"></div>
+    
+    <!-- Sombra de la luz del endoiluminador -->
+    <div class="light-shadow" id="light-shadow"></div>
+    
+    <!-- Contenedor del instrumento quirúrgico con sombras -->
+    <div class="instrument-container">
+      <!-- Sombras -->
+      <div class="instrument-base-shadow"></div>
+      <div class="instrument-rod-shadow"></div>
+      <div class="instrument-tip-shadow"></div>
+      
+      <!-- Instrumento real -->
+      <div id="instrument-base" class="instrument-base"></div>
+      <div id="instrument-rod" class="instrument-rod"></div>
+      <div id="instrument-tip" class="instrument-tip"></div>
+    </div>
+    
+    <!-- Canvas para dibujar la membrana y efectos -->
+    <canvas id="retina-canvas"></canvas>
+  </div>
+  
+  <div id="blood-overlay"></div>
+  <div class="instructions">
+    <p id="feedback-text" style="margin-top: 10px; font-style: italic;"></p>
+  </div>
+  <div id="score-panel">
+    <div>Daño: <span id="damage-score">0%</span></div>
+    <div>Tiempo: <span id="time-score">0s</span></div>
+  </div>
+  <div id="metrics-panel">
+    <div>Tensión: <span id="tension-value">0%</span></div>
+    <div>Presión: <span id="pressure-value">0 mmHg</span></div>
+    <div>Flujo: <span id="flow-value">0 µl/min</span></div>
+  </div>
+  <div id="oct-display">
+    <canvas id="oct-canvas"></canvas>
+  </div>
+  <div id="tool-panel">
+    <button id="forceps-btn">✋ Activar Instrumento</button>
+    <button id="reset-btn">🌀 Simulación</button>
+  </div>
+
+  <!-- Joysticks para control -->
+  <div id="action-button-container" class="joystick-container">
+    <button id="btn-precionar">Accionar Instrumento</button>
+  </div>
+  <div id="joystick-vitrectomo-container" class="joystick-container">
+    <div id="joystick-vitrectomo" class="joystick">
+      <div class="joystick-handle"></div>
+    </div>
+    <div class="slider-container">
+      <label>Instrumento (Z)</label>
+      <input type="range" id="vitrectomo-z-slider" min="-250" max="-50" value="-150">
+    </div>
+  </div>
+
+  <script>
+ /* ================== VARIABLES GLOBALES ================== */
+let vitrectomoJoystickX = 50, vitrectomoJoystickY = 50;
+let currentDepth = parseInt(document.getElementById('vitrectomo-z-slider').value);
+let isActionButtonPressed = false;
+let instrumentTipZ = 0;
+let shadowTargetX = 0, shadowTargetY = 0;
+let shadowCurrentX = 0, shadowCurrentY = 0;
+let lastUpdateTime = 0;
+const frameRate = 60;
+const frameInterval = 1000 / frameRate;
+
+/* ================== INICIALIZACIÓN DEL INSTRUMENTO ================== */
+function setupInstrument() {
+  const retina = document.getElementById('eye-canvas');
+  const retinaRect = retina.getBoundingClientRect();
+  
+  // Configurar la base del instrumento (fija en la parte inferior derecha)
+  const base = document.getElementById('instrument-base');
+  base.style.left = (retinaRect.width * 0.85 - 15) + 'px';
+  base.style.bottom = '20px';
+  
+  // Configurar la punta del instrumento (inicialmente en el centro)
+  const tip = document.getElementById('instrument-tip');
+  tip.style.left = (retinaRect.width / 2) + 'px';
+  tip.style.top = (retinaRect.height / 2) + 'px';
+  
+  // Posición inicial de la sombra
+  shadowTargetX = shadowCurrentX = retinaRect.width / 2 + 50;
+  shadowTargetY = shadowCurrentY = retinaRect.height / 2 - 50;
+  document.querySelector('.instrument-tip-shadow').style.left = shadowCurrentX + 'px';
+  document.querySelector('.instrument-tip-shadow').style.top = shadowCurrentY + 'px';
+  
+  // Asegurarse que el palo sea visible
+  const rod = document.getElementById('instrument-rod');
+  rod.style.display = 'block';
+  rod.style.zIndex = '30';
+  
+  // Actualizar el palo para que conecte base y punta
+  updateInstrumentRod();
+}
+
+function updateInstrumentRod() {
+  const retina = document.getElementById('eye-canvas');
+  const retinaRect = retina.getBoundingClientRect();
+  const base = document.getElementById('instrument-base');
+  const baseRect = base.getBoundingClientRect();
+  const tip = document.getElementById('instrument-tip');
+  const tipRect = tip.getBoundingClientRect();
+  const rod = document.getElementById('instrument-rod');
+  const rodShadow = document.querySelector('.instrument-rod-shadow');
+  
+  // Posiciones absolutas
+  const baseX = baseRect.left - retinaRect.left + baseRect.width/2;
+  const baseY = baseRect.top - retinaRect.top + baseRect.height/2;
+  const tipX = tipRect.left - retinaRect.left + tipRect.width/2;
+  const tipY = tipRect.top - retinaRect.top + tipRect.height/2;
+  
+  // Calcular longitud y ángulo
+  const dx = tipX - baseX;
+  const dy = tipY - baseY;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+  
+  // Calcular sombra del palo
+  const shadowOriginX = retinaRect.width;
+  const shadowOriginY = retinaRect.height / 2;
+  
+  const shadowDx = shadowCurrentX - shadowOriginX;
+  const shadowDy = shadowCurrentY - shadowOriginY;
+  const shadowLength = Math.sqrt(shadowDx * shadowDx + shadowDy * shadowDy);
+  const shadowAngle = Math.atan2(shadowDy, shadowDx) * (180 / Math.PI);
+  
+  // Posicionar y rotar el palo real
+  rod.style.width = length + 'px';
+  rod.style.left = baseX + 'px';
+  rod.style.top = baseY + 'px';
+  rod.style.transform = `rotate(${angle}deg)`;
+  
+  // Posicionar y rotar la sombra del palo
+  rodShadow.style.width = shadowLength + 'px';
+  rodShadow.style.left = shadowOriginX + 'px';
+  rodShadow.style.top = shadowOriginY + 'px';
+  rodShadow.style.transform = `rotate(${shadowAngle}deg)`;
+}
+
+/* ================== CONTROL DE JOYSTICKS ================== */
+function initJoysticks() {
+  const joystickVitrectomo = document.getElementById('joystick-vitrectomo');
+  initJoystick(joystickVitrectomo, (x, y) => {
+    vitrectomoJoystickX = x;
+    vitrectomoJoystickY = y;
+    updateInstrumentPosition(x, y);
+  });
+}
+
+function initJoystick(joystickElement, updateCallback) {
+  const handle = joystickElement.querySelector('.joystick-handle');
+  const rect = joystickElement.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  const maxDistance = rect.width / 2;
+  let isTouching = false;
+  
+  function handleStart(e) {
+    e.preventDefault();
+    isTouching = true;
+    handleMove(e);
+  }
+  
+  function handleMove(e) {
+    if (!isTouching) return;
+    
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    if(!clientX || !clientY) return;
+    
+    const bounds = joystickElement.getBoundingClientRect();
+    const x = clientX - bounds.left;
+    const y = clientY - bounds.top;
+    
+    let deltaX = x - centerX;
+    let deltaY = y - centerY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    if (distance > maxDistance) {
+      const angle = Math.atan2(deltaY, deltaX);
+      deltaX = Math.cos(angle) * maxDistance;
+      deltaY = Math.sin(angle) * maxDistance;
+    }
+    
+    handle.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    
+    const normalizedX = ((deltaX + maxDistance) / (2 * maxDistance)) * 100;
+    const normalizedY = ((deltaY + maxDistance) / (2 * maxDistance)) * 100;
+    
+    updateCallback(normalizedX, normalizedY);
+  }
+  
+  function handleEnd() {
+    isTouching = false;
+    handle.style.transform = `translate(0px, 0px)`;
+    updateCallback(50, 50);
+  }
+  
+  // Eventos táctiles
+  joystickElement.addEventListener('touchstart', handleStart, { passive: false });
+  joystickElement.addEventListener('touchmove', handleMove, { passive: false });
+  joystickElement.addEventListener('touchend', handleEnd);
+  
+  // Eventos de ratón para compatibilidad
+  joystickElement.addEventListener('mousedown', handleStart);
+  document.addEventListener('mousemove', handleMove);
+  document.addEventListener('mouseup', handleEnd);
+}
+
+/* ================== ACTUALIZACIÓN DE POSICIONES ================== */
+function updateInstrumentPosition(normX, normY) {
+  const retina = document.getElementById('eye-canvas');
+  const retinaRect = retina.getBoundingClientRect();
+  const tip = document.getElementById('instrument-tip');
+  const tipShadow = document.querySelector('.instrument-tip-shadow');
+  
+  // Calcular posición de la punta basada en el joystick
+  const maxOffset = retinaRect.width * 0.4;
+  const offsetX = (normX - 50) / 50 * maxOffset;
+  const offsetY = (normY - 50) / 50 * maxOffset;
+  
+  // Posición absoluta de la punta
+  const tipX = retinaRect.width / 2 + offsetX;
+  const tipY = retinaRect.height / 2 + offsetY;
+  
+  // Actualizar posición de la punta
+  tip.style.left = tipX + 'px';
+  tip.style.top = tipY + 'px';
+  
+  // Efecto de profundidad cuando se presiona el botón accionar
+  if (isActionButtonPressed) {
+    instrumentTipZ = -20; // Mover la punta hacia adelante
+    tip.classList.add('active');
+    tip.style.transform = `translate(-50%, -50%) translateZ(${instrumentTipZ}px)`;
+  } else {
+    instrumentTipZ = 0; // Volver a la posición normal
+    tip.classList.remove('active');
+    tip.style.transform = `translate(-50%, -50%) translateZ(${instrumentTipZ}px)`;
+  }
+  
+  // Calcular posición de la sombra basada en la profundidad
+  const depthRatio = (currentDepth + 250) / 200;
+  const shadowOffsetX = 60 * (1 - depthRatio * 0.7);
+  const shadowOffsetY = -60 * (1 - depthRatio * 0.7);
+  
+  // Posición objetivo de la sombra
+  shadowTargetX = tipX + shadowOffsetX;
+  shadowTargetY = tipY + shadowOffsetY;
+  
+  // Ajustar tamaño de la sombra basado en profundidad
+  const shadowSize = 0.7 + depthRatio * 0.6;
+  tipShadow.style.width = (20 * shadowSize) + 'px';
+  tipShadow.style.height = (20 * shadowSize) + 'px';
+  
+  // Actualizar el palo para que conecte base y punta
+  updateInstrumentRod();
+  
+  // Actualizar la posición del mouse para la simulación
+  mouseX = tipX;
+  mouseY = tipY;
+}
+
+/* ================== MANEJO DE EVENTOS ================== */
+function setupEventListeners() {
+  // Botón de acción
+  const actionButton = document.getElementById('btn-precionar');
+  
+  actionButton.addEventListener('mousedown', startAction);
+  actionButton.addEventListener('mouseup', stopAction);
+  actionButton.addEventListener('mouseleave', stopAction);
+  
+  actionButton.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    startAction();
+  }, { passive: false });
+  
+  actionButton.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    stopAction();
+  });
+  
+  // Control deslizante de profundidad
+  document.getElementById('vitrectomo-z-slider').addEventListener('input', function() {
+    currentDepth = parseInt(this.value);
+  });
+  
+  // Manejo de teclado
+  document.addEventListener('keydown', function(e) {
+    if ((e.key === ' ' || e.key === 'Enter') && !isActionButtonPressed) {
+      e.preventDefault();
+      startAction();
+      actionButton.classList.add('keyboard-active');
+    }
+  });
+  
+  document.addEventListener('keyup', function(e) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      stopAction();
+      actionButton.classList.remove('keyboard-active');
+    }
+  });
+}
+
+function startAction() {
+  isActionButtonPressed = true;
+  forcepsActive = true;
+  document.getElementById('forceps-btn').classList.add('active');
+  document.getElementById('forceps-btn').textContent = "✋ Instrumento Activo";
+  
+  // Establecer el punto de agarre cuando se activa
+  if (!isPeeling) {
+    isPeeling = true;
+    pinchStart = { x: mouseX, y: mouseY };
+  }
+  
+  // Actualizar posición del instrumento para aplicar el efecto de profundidad
+  updateInstrumentPosition(vitrectomoJoystickX, vitrectomoJoystickY);
+}
+
+function stopAction() {
+  isActionButtonPressed = false;
+  forcepsActive = false;
+  document.getElementById('forceps-btn').classList.remove('active');
+  document.getElementById('forceps-btn').textContent = "✋ Activar Instrumento";
+  isPeeling = false;
+  
+  // Actualizar posición del instrumento para quitar el efecto de profundidad
+  updateInstrumentPosition(vitrectomoJoystickX, vitrectomoJoystickY);
+}
+
+/* ================== SIMULACIÓN DE PEELING ================== */
+const canvas = document.getElementById('retina-canvas');
+const ctx = canvas.getContext('2d');
+const octCanvas = document.getElementById('oct-canvas');
+const octCtx = octCanvas.getContext('2d');
+const bloodOverlay = document.getElementById('blood-overlay');
+const feedbackText = document.getElementById('feedback-text');
+const damageScore = document.getElementById('damage-score');
+const timeScore = document.getElementById('time-score');
+const tensionValue = document.getElementById('tension-value');
+const pressureValue = document.getElementById('pressure-value');
+const flowValue = document.getElementById('flow-value');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+octCanvas.width = 300;
+octCanvas.height = 180;
+
+// Configuración del ojo
+const eye = {
+  centerX: canvas.width / 2,
+  centerY: canvas.height / 2,
+  radius: Math.min(canvas.width, canvas.height) * 0.35,
+  color: '#DE9F53',
+  borderColor: '#5B3415',
+  borderWidth: 15,
+  bloodVessels: []
+};
+
+// Estados de la simulación
+let forcepsActive = false;
+let isPeeling = false;
+let pinchStart = { x: 0, y: 0 };
+let mouseX = 0, mouseY = 0;
+let membraneLifted = false;
+let surgeryStartTime = 0;
+let surgeryTime = 0;
+let damageLevel = 0;
+let lastFeedbackTime = 0;
+let bloodOpacity = 0;
+let bloodParticles = [];
+let difficultyLevel = 1;
+
+// Sistema de membrana
+const membrane = {
+  baseLayer: [],    // Capa base fija (epitelio)
+  topLayer: [],     // Capa superior que se levanta
+  elasticity: 0.03, // Resistencia al estiramiento
+  tearThreshold: 0.5, // Fuerza necesaria para iniciar el peeling
+  segments: 120,    // Número de segmentos
+  tension: 0,       // Tensión actual
+  flapPosition: { x: 0, y: 0 }, // Posición actual del colgajo
+  tearPoints: [],    // Puntos donde se ha desgarrado la membrana
+  maxTension: 0,    // Máxima tensión aplicada
+  originalPositions: [] // Posiciones originales para cálculo de precisión
+};
+
+// Modelo OCT (modificado para mostrar invertido y con agujero macular)
+const retinaLayers = [
+  { name: 'RPE', thickness: 10, color: 'rgba(60, 40, 20, 0.9)', reflectivity: 0.7 },
+  { name: 'IS/OS', thickness: 15, color: 'rgba(140, 100, 80, 0.8)', reflectivity: 0.9 },
+  { name: 'ELM', thickness: 5, color: 'rgba(120, 80, 60, 0.8)', reflectivity: 0.8 },
+  { name: 'ONL', thickness: 40, color: 'rgba(50, 30, 10, 0.6)', reflectivity: 0.1 },
+  { name: 'OPL', thickness: 10, color: 'rgba(60, 40, 20, 0.6)', reflectivity: 0.2 },
+  { name: 'INL', thickness: 25, color: 'rgba(70, 50, 30, 0.6)', reflectivity: 0.1 },
+  { name: 'IPL', thickness: 15, color: 'rgba(80, 60, 40, 0.6)', reflectivity: 0.1 },
+  { name: 'GCL', thickness: 20, color: 'rgba(100, 70, 50, 0.6)', reflectivity: 0.2 },
+  { name: 'NFL', thickness: 15, color: 'rgba(120, 80, 60, 0.7)', reflectivity: 0.3 }
+];
+
+// Inicializar membranas
+function initMembrane() {
+  membrane.baseLayer = [];
+  membrane.topLayer = [];
+  membrane.tearPoints = [];
+  membrane.tension = 0;
+  membrane.maxTension = 0;
+  membraneLifted = false;
+  membrane.originalPositions = [];
+  membrane.flapPosition = { 
+    x: eye.centerX, 
+    y: eye.centerY + eye.radius * 0.7 
+  };
+  
+  // Ajustar dificultad (reducida ligeramente)
+  membrane.elasticity = 0.035 + (difficultyLevel * 0.008);
+  membrane.tearThreshold = 0.45 + (difficultyLevel * 0.08);
+  
+  // Crear puntos para ambas capas
+  for (let i = 0; i < membrane.segments; i++) {
+    const angle = (i / membrane.segments) * Math.PI * 2;
+    const x = eye.centerX + eye.radius * Math.cos(angle);
+    const y = eye.centerY + eye.radius * Math.sin(angle);
+    
+    // Capa base (fija)
+    membrane.baseLayer.push({
+      x: x,
+      y: y,
+      origX: x,
+      origY: y,
+      elasticity: 0.7 + Math.random() * 0.3 // Variabilidad en elasticidad
+    });
+    
+    // Capa superior (movible)
+    membrane.topLayer.push({
+      x: x,
+      y: y,
+      origX: x,
+      origY: y,
+      lifted: false,
+      elasticity: 0.6 + Math.random() * 0.4, // Variabilidad en elasticidad (más flexible)
+      tearResistance: 0.9 + Math.random() * 0.3 // Mayor resistencia al desgarro
+    });
+
+    membrane.originalPositions.push({x: x, y: y});
+  }
+  
+  // Inicializar vasos sanguíneos
+  initBloodVessels();
+  
+  // Resetear métricas
+  damageLevel = 0;
+  surgeryStartTime = Date.now();
+  surgeryTime = 0;
+  bloodOpacity = 0;
+  bloodParticles = [];
+  updateScoreDisplay();
+  updateMetrics();
+  
+  // Crear overlay de sangre
+  bloodOverlay.style.background = 'radial-gradient(circle at 50% 50%, transparent 60%, rgba(150, 0, 0, 0)';
+  bloodOverlay.style.opacity = '0';
+}
+
+// Inicializar vasos sanguíneos en forma de raíces curvadas
+function initBloodVessels() {
+  eye.bloodVessels = [];
+  const vesselCount = 12 + Math.floor(difficultyLevel * 3);
+  
+  // Ángulo del nervio óptico (izquierda)
+  const opticNerveAngle = Math.PI;
+  
+  // Crear vasos que salen del nervio óptico en forma de raíces
+  for (let i = 0; i < vesselCount; i++) {
+    // Ángulo base del vaso (todos salen del nervio)
+    const baseAngle = opticNerveAngle + (Math.random() - 0.5) * Math.PI/2;
+    
+    // Longitud del vaso principal
+    const mainLength = eye.radius * (0.5 + Math.random() * 0.3);
+    
+    // Crear vaso principal
+    eye.bloodVessels.push({
+      angle: baseAngle,
+      length: mainLength,
+      width: 1.5 + Math.random() * 1.5,
+      curveIntensity: eye.radius * (0.1 + Math.random() * 0.1),
+      broken: false,
+      branches: []
+    });
+    
+    // Crear ramificaciones (2-3 por vaso principal)
+    const branchCount = 2 + Math.floor(Math.random() * 2);
+    for (let b = 0; b < branchCount; b++) {
+      const branchAngle = baseAngle + (Math.random() - 0.5) * Math.PI/2;
+      const branchLength = mainLength * (0.3 + Math.random() * 0.4);
+      
+      eye.bloodVessels.push({
+        angle: branchAngle,
+        length: branchLength,
+        width: 0.8 + Math.random() * 0.7,
+        curveIntensity: eye.radius * (0.05 + Math.random() * 0.05),
+        broken: false,
+        isBranch: true
+      });
+    }
+  }
+}
+
+// Dibujar toda la escena
+function drawScene() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Dibujar nervio óptico en el borde izquierdo (medio círculo)
+  drawOpticNerve();
+
+  // Membrana base (epitelio)
+  drawMembraneLayer(membrane.baseLayer, 'rgba(180, 220, 255, 0.25)', 'rgba(200, 230, 255, 0.5)');
+
+  // Membrana superior (capa que se levanta)
+  if (membraneLifted) {
+    drawMembraneLayer(membrane.topLayer, 'rgba(100, 150, 255, 0.6)', 'rgba(70, 130, 255, 0.8)');
+    drawMembraneFlap();
+  }
+
+  // Efectos de daño
+  drawDamageEffects();
+
+  // Partículas de sangre
+  drawBloodParticles();
+}
+
+// Dibujar nervio óptico (medio círculo)
+function drawOpticNerve() {
+  ctx.save();
+  
+  // Posición del nervio óptico (borde izquierdo)
+  const nerveX = eye.centerX - eye.radius;
+  const nerveY = eye.centerY;
+  const nerveRadius = eye.radius * 0.2;
+  
+  // Medio círculo del nervio (orientado hacia la derecha)
+  ctx.beginPath();
+  ctx.arc(nerveX, nerveY, nerveRadius, -Math.PI/2, Math.PI/2);
+  
+  // Gradiente para el nervio (blanco amarillento)
+  const nerveGradient = ctx.createLinearGradient(
+    nerveX, nerveY - nerveRadius,
+    nerveX, nerveY + nerveRadius
+  );
+  nerveGradient.addColorStop(0, 'rgba(240, 240, 220, 0.9)');
+  nerveGradient.addColorStop(1, 'rgba(220, 220, 200, 0.8)');
+  
+  ctx.fillStyle = nerveGradient;
+  ctx.fill();
+  
+  // Borde del nervio
+  ctx.strokeStyle = 'rgba(180, 180, 160, 0.8)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  ctx.restore();
+}
+
+// Dibujar vasos sanguíneos en forma de raíces curvadas
+function drawBloodVessels() {
+  ctx.save();
+  
+  // Ordenar vasos por anchura (los más gruesos primero)
+  const sortedVessels = [...eye.bloodVessels].sort((a, b) => b.width - a.width);
+  
+  for (const vessel of sortedVessels) {
+    if (vessel.broken) continue;
+    
+    ctx.beginPath();
+    
+    // Todos los vasos parten del nervio óptico
+    const startX = eye.centerX - eye.radius;
+    const startY = eye.centerY;
+    
+    // Punto final del vaso
+    const endX = eye.centerX + (eye.radius * 0.9) * Math.cos(vessel.angle);
+    const endY = eye.centerY + (eye.radius * 0.9) * Math.sin(vessel.angle);
+    
+    // Puntos de control para la curva (más pronunciada para simular raíces)
+    const cp1x = startX + (endX - startX) * 0.2 + 
+                 vessel.curveIntensity * 1.5 * Math.cos(vessel.angle + Math.PI/2);
+    const cp1y = startY + (endY - startY) * 0.2 + 
+                 vessel.curveIntensity * 1.5 * Math.sin(vessel.angle + Math.PI/2);
+    
+    const cp2x = startX + (endX - startX) * 0.6 + 
+                 vessel.curveIntensity * 0.8 * Math.cos(vessel.angle - Math.PI/2);
+    const cp2y = startY + (endY - startY) * 0.6 + 
+                 vessel.curveIntensity * 0.8 * Math.sin(vessel.angle - Math.PI/2);
+    
+    ctx.moveTo(startX, startY);
+    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    
+    ctx.lineWidth = vessel.width;
+    
+    // Color más oscuro para vasos más gruesos
+    const vesselDarkness = 40 + (vessel.width * 10);
+    ctx.strokeStyle = vessel.broken ? 
+      'rgba(200, 0, 0, 0.8)' : 
+      `rgba(${vesselDarkness}, 20, 20, 0.7)`;
+    
+    ctx.stroke();
+    
+    // Pequeñas ramificaciones secundarias
+    if (!vessel.isBranch && Math.random() > 0.7) {
+      ctx.beginPath();
+      const branchX = startX + (endX - startX) * (0.3 + Math.random() * 0.4);
+      const branchY = startY + (endY - startY) * (0.3 + Math.random() * 0.4);
+      const branchAngle = vessel.angle + (Math.random() - 0.5) * Math.PI/4;
+      const branchLength = (endX - startX) * 0.2 * Math.random();
+      
+      ctx.moveTo(branchX, branchY);
+      ctx.quadraticCurveTo(
+        branchX + branchLength * Math.cos(branchAngle) * 0.5,
+        branchY + branchLength * Math.sin(branchAngle) * 0.5,
+        branchX + branchLength * Math.cos(branchAngle),
+        branchY + branchLength * Math.sin(branchAngle)
+      );
+      
+      ctx.lineWidth = vessel.width * 0.5;
+      ctx.strokeStyle = `rgba(${vesselDarkness}, 20, 20, 0.6)`;
+      ctx.stroke();
+    }
+  }
+  
+  ctx.restore();
+}
+
+// Dibujar agujero macular en lugar del iris
+function drawMacularHole() {
+  ctx.save();
+  
+  // Área macular
+  ctx.beginPath();
+  ctx.arc(eye.centerX, eye.centerY, eye.radius * 0.12, 0, Math.PI * 2);
+  
+  const macularGradient = ctx.createRadialGradient(
+    eye.centerX, eye.centerY, eye.radius * 0.05,
+    eye.centerX, eye.centerY, eye.radius * 0.12
+  );
+  macularGradient.addColorStop(0, 'rgba(80, 40, 30, 0.9)');
+  macularGradient.addColorStop(1, 'rgba(120, 60, 40, 0.7)');
+  
+  ctx.fillStyle = macularGradient;
+  ctx.fill();
+  
+  // Agujero macular central
+  ctx.beginPath();
+  ctx.arc(eye.centerX, eye.centerY, eye.radius * 0.06, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(40, 20, 10, 0.9)';
+  ctx.fill();
+  
+  // Bordes irregulares del agujero
+  for (let i = 0; i < 360; i += 30) {
+    const angle = i * Math.PI / 180;
+    const radiusVariation = eye.radius * 0.06 * (0.8 + Math.random() * 0.4);
+    
+    ctx.beginPath();
+    ctx.moveTo(eye.centerX, eye.centerY);
+    ctx.lineTo(
+      eye.centerX + radiusVariation * Math.cos(angle),
+      eye.centerY + radiusVariation * Math.sin(angle)
+    );
+    
+    ctx.strokeStyle = `rgba(200, 120, 80, 0.7)`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  
+  ctx.restore();
+}
+
+// Dibujar una capa de membrana
+function drawMembraneLayer(points, fillStyle, strokeStyle) {
+  if (points.length < 2) return;
+  
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  
+  // Dibujar con curvas suaves
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i-1];
+    const curr = points[i];
+    const cpx = (prev.x + curr.x) / 2;
+    const cpy = (prev.y + curr.y) / 2;
+    
+    if (i === 1) {
+      ctx.lineTo(prev.x, prev.y);
+    }
+    ctx.quadraticCurveTo(prev.x, prev.y, cpx, cpy);
+  }
+  ctx.closePath();
+  
+  ctx.fillStyle = 'rgba(100, 150, 255, 0.4)';  // Azul semi-transparente
+  ctx.fill();
+  
+  // Patrón de textura
+  if (points === membrane.topLayer && membraneLifted) {
+    ctx.clip();
+    drawMembraneTexture(points);
+  }
+  
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Dibujar textura de membrana
+function drawMembraneTexture(points) {
+  const centerX = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+  const centerY = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+  
+  for (let i = 0; i < 200; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * eye.radius * 0.8;
+    const x = centerX + dist * Math.cos(angle);
+    const y = centerY + dist * Math.sin(angle);
+    const size = 1 + Math.random() * 3;
+    
+    // Verificar si el punto está dentro de la membrana
+    if (isPointInPolygon(x, y, points)) {
+      ctx.beginPath();
+      ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.05 + Math.random() * 0.1})`;
+      ctx.fill();
+      
+      // Pequeñas irregularidades
+      if (Math.random() > 0.8) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(
+          x + (Math.random() - 0.5) * size * 2,
+          y + (Math.random() - 0.5) * size * 2
+        );
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 + Math.random() * 0.2})`;
+        ctx.lineWidth = 0.3;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// Verificar si un punto está dentro de un polígono
+function isPointInPolygon(x, y, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    
+    const intersect = ((yi > y) !== (yj > y))
+      && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// Dibujar el colgajo de membrana levantado
+function drawMembraneFlap() {
+  const startAngle = Math.PI * 0.4;
+  const endAngle = Math.PI * 1.6;
+  const flapCenterX = (membrane.topLayer[0].x + membrane.topLayer[membrane.segments/2].x) / 2;
+  const flapCenterY = (membrane.topLayer[0].y + membrane.topLayer[membrane.segments/2].y) / 2;
+  
+  ctx.save();
+  ctx.beginPath();
+  
+  // Lado izquierdo del colgajo
+  ctx.moveTo(membrane.topLayer[0].x, membrane.topLayer[0].y);
+  for (let i = 1; i < membrane.segments/2; i++) {
+    const angle = startAngle + (endAngle - startAngle) * (i / (membrane.segments/2));
+    const dist = Math.hypot(membrane.topLayer[i].x - flapCenterX, membrane.topLayer[i].y - flapCenterY);
+    const pullFactor = 1 - Math.abs(i/(membrane.segments/2) - 0.5) * 2;
+    
+    const x = membrane.flapPosition.x + (membrane.topLayer[i].x - membrane.flapPosition.x) * pullFactor;
+    const y = membrane.flapPosition.y + (membrane.topLayer[i].y - membrane.flapPosition.y) * pullFactor;
+    
+    ctx.lineTo(x, y);
+  }
+  
+  // Lado derecho del colgajo
+  for (let i = membrane.segments/2; i < membrane.segments; i++) {
+    const angle = startAngle + (endAngle - startAngle) * (i / membrane.segments);
+    const dist = Math.hypot(membrane.topLayer[i].x - flapCenterX, membrane.topLayer[i].y - flapCenterY);
+    const pullFactor = 1 - Math.abs(i/membrane.segments - 0.5) * 2;
+    
+    const x = membrane.flapPosition.x + (membrane.topLayer[i].x - membrane.flapPosition.x) * pullFactor;
+    const y = membrane.flapPosition.y + (membrane.topLayer[i].y - membrane.flapPosition.y) * pullFactor;
+    
+    ctx.lineTo(x, y);
+  }
+  
+  ctx.closePath();
+  
+  // Gradiente para el colgajo
+  const flapGradient = ctx.createLinearGradient(
+    flapCenterX, flapCenterY,
+    membrane.flapPosition.x, membrane.flapPosition.y
+  );
+  flapGradient.addColorStop(0, 'rgba(80, 140, 255, 0.7)');  // Azul claro
+  flapGradient.addColorStop(1, 'rgba(120, 180, 255, 0.9)'); // Azul más intenso
+  
+  ctx.fillStyle = flapGradient;
+  ctx.fill();
+  
+  // Textura del colgajo
+  ctx.clip();
+  drawFlapTexture(flapCenterX, flapCenterY);
+  
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  // Efecto de pliegues en el colgajo
+  if (membrane.tension > 0.3) {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 0.8;
+    
+    for (let i = 5; i < membrane.segments - 5; i += 8) {
+      ctx.beginPath();
+      ctx.moveTo(
+        (membrane.topLayer[i].x + membrane.flapPosition.x) / 2,
+        (membrane.topLayer[i].y + membrane.flapPosition.y) / 2
+      );
+      ctx.lineTo(membrane.topLayer[i].x, membrane.topLayer[i].y);
+      ctx.stroke();
+    }
+  }
+  
+  // Mostrar puntos de desgarro
+  for (const tear of membrane.tearPoints) {
+    ctx.beginPath();
+    ctx.arc(tear.x, tear.y, 5 + membrane.tension * 5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 50, 50, ${0.3 + membrane.tension * 0.5})`;
+    ctx.fill();
+  }
+  
+  ctx.restore();
+}
+
+// Dibujar textura del colgajo
+function drawFlapTexture(centerX, centerY) {
+  const flapLength = Math.hypot(
+    membrane.flapPosition.x - centerX,
+    membrane.flapPosition.y - centerY
+  );
+  
+  for (let i = 0; i < 50; i++) {
+    const t = Math.random();
+    const x = centerX + (membrane.flapPosition.x - centerX) * t;
+    const y = centerY + (membrane.flapPosition.y - centerY) * t;
+    
+    const angle = Math.atan2(
+      membrane.flapPosition.y - centerY,
+      membrane.flapPosition.x - centerX
+    ) + (Math.random() - 0.5) * Math.PI/4;
+    
+    const length = flapLength * (0.1 + Math.random() * 0.3);
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(
+      x + length * Math.cos(angle),
+      y + length * Math.sin(angle)
+    );
+    
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 + Math.random() * 0.2})`;
+    ctx.lineWidth = 0.5 + Math.random();
+    ctx.stroke();
+  }
+}
+
+// Dibujar efectos de daño
+function drawDamageEffects() {
+  if (damageLevel <= 0) return;
+  
+  ctx.save();
+  
+  // Hemorragia localizada
+  if (damageLevel > 30) {
+    for (const tear of membrane.tearPoints) {
+      const radius = eye.radius * 0.1 * (damageLevel / 100);
+      
+      const gradient = ctx.createRadialGradient(
+        tear.x, tear.y, 0,
+        tear.x, tear.y, radius
+      );
+      gradient.addColorStop(0, `rgba(200, 0, 0, ${0.5 * (damageLevel / 100)})`);
+      gradient.addColorStop(1, 'rgba(200, 0, 0, 0)');
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(tear.x, tear.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  
+  // Edema corneal (opacidad)
+  if (damageLevel > 50) {
+    ctx.beginPath();
+    ctx.arc(eye.centerX, eye.centerY, eye.radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.2 * (damageLevel / 100)})`;
+    ctx.fill();
+  }
+  
+  ctx.restore();
+}
+
+// Dibujar partículas de sangre
+function drawBloodParticles() {
+  if (bloodParticles.length === 0) return;
+  
+  ctx.save();
+  
+  for (const particle of bloodParticles) {
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    
+    const gradient = ctx.createRadialGradient(
+      particle.x, particle.y, 0,
+      particle.x, particle.y, particle.size
+    );
+    gradient.addColorStop(0, `rgba(200, 0, 0, ${particle.opacity})`);
+    gradient.addColorStop(1, `rgba(100, 0, 0, 0)`);
+    
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  }
+  
+  ctx.restore();
+}
+
+// Dibujar visualización OCT (mejorada para mostrar agarre de membrana y agujero macular)
+function drawOCT() {
+  octCtx.clearRect(0, 0, octCanvas.width, octCanvas.height);
+  
+  // Fondo del OCT con gradiente
+  const bgGradient = octCtx.createLinearGradient(0, 0, 0, octCanvas.height);
+  bgGradient.addColorStop(0, '#001020');
+  bgGradient.addColorStop(1, '#000000');
+  octCtx.fillStyle = bgGradient;
+  octCtx.fillRect(0, 0, octCanvas.width, octCanvas.height);
+  
+  // Eje horizontal (profundidad) - invertido
+  const depthScale = octCanvas.height / 1000;
+  const scanLineX = octCanvas.width / 2;
+  const scanWidth = 150;
+  
+  // Dibujar capas retinianas en OCT (orden invertido)
+  let currentDepth = 0;
+  retinaLayers.forEach(layer => {
+    const layerHeight = layer.thickness * depthScale;
+    
+    // Capa principal (posición invertida)
+    octCtx.fillStyle = layer.color;
+    octCtx.fillRect(
+      scanLineX - scanWidth, 
+      octCanvas.height - currentDepth * depthScale - layerHeight, 
+      scanWidth * 2, 
+      layerHeight
+    );
+    
+    // Efecto de reflexión en superficies (posición invertida)
+    if(layer.reflectivity > 0) {
+      const reflectionGradient = octCtx.createLinearGradient(
+        scanLineX - scanWidth, octCanvas.height - currentDepth * depthScale - layerHeight,
+        scanLineX + scanWidth, octCanvas.height - currentDepth * depthScale - layerHeight
+      );
+      reflectionGradient.addColorStop(0, 'transparent');
+      reflectionGradient.addColorStop(0.5, `rgba(255, 255, 255, ${layer.reflectivity * 0.5})`);
+      reflectionGradient.addColorStop(1, 'transparent');
+      
+      octCtx.fillStyle = reflectionGradient;
+      octCtx.fillRect(
+        scanLineX - scanWidth, 
+        octCanvas.height - currentDepth * depthScale - layerHeight, 
+        scanWidth * 2, 
+        layerHeight
+      );
+    }
+    
+    currentDepth += layer.thickness;
+  });
+  
+  // Dibujar membrana epirretiniana en OCT (posición invertida)
+  const membraneThickness = 5 * depthScale;
+  const membraneBaseY = octCanvas.height - currentDepth * depthScale;
+  const membraneElevation = membraneLifted ? (membrane.tension / 100) * 150 * depthScale : 0;
+  
+  // Superficie superior de la membrana (invertida) con hundimiento macular
+  octCtx.beginPath();
+  octCtx.moveTo(scanLineX - scanWidth, membraneBaseY - membraneThickness);
+  
+  if(membraneLifted) {
+    // Membrana elevada con forma de curva suave (invertida)
+    const controlY = membraneBaseY - membraneThickness - membraneElevation;
+    
+    octCtx.quadraticCurveTo(
+      scanLineX, 
+      controlY, 
+      scanLineX + scanWidth, 
+      membraneBaseY - membraneThickness
+    );
+  } else {
+    // Membrana plana con hundimiento macular en el centro
+    const macularDepression = 15 * depthScale;
+    const macularWidth = 30;
+    
+    // Lado izquierdo hasta el inicio del hundimiento
+    octCtx.lineTo(scanLineX - macularWidth, membraneBaseY - membraneThickness);
+    
+    // Curva de hundimiento macular
+    octCtx.quadraticCurveTo(
+      scanLineX, 
+      membraneBaseY - membraneThickness + macularDepression, 
+      scanLineX + macularWidth, 
+      membraneBaseY - membraneThickness
+    );
+    
+    // Lado derecho
+    octCtx.lineTo(scanLineX + scanWidth, membraneBaseY - membraneThickness);
+  }
+  
+  // Superficie inferior de la membrana (invertida)
+  octCtx.lineTo(scanLineX + scanWidth, membraneBaseY);
+  
+  if(membraneLifted) {
+    octCtx.quadraticCurveTo(
+      scanLineX, 
+      membraneBaseY - membraneElevation * 0.7, 
+      scanLineX - scanWidth, 
+      membraneBaseY
+    );
+  } else {
+    octCtx.lineTo(scanLineX - scanWidth, membraneBaseY);
+  }
+  
+  octCtx.closePath();
+  
+  // Relleno de membrana con gradiente (invertido)
+  const membraneGradient = octCtx.createLinearGradient(
+    scanLineX, membraneBaseY - membraneThickness - membraneElevation,
+    scanLineX, membraneBaseY
+  );
+  membraneGradient.addColorStop(0, 'rgba(200, 230, 255, 0.7)');
+  membraneGradient.addColorStop(1, 'rgba(220, 240, 255, 0.4)');
+  octCtx.fillStyle = membraneGradient;
+  octCtx.fill();
+  
+  // Borde de la membrana
+  octCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+  octCtx.lineWidth = 1;
+  octCtx.stroke();
+  
+  // Dibujar agujero macular (similar a practica6.html)
+  const macularHoleWidth = 20;
+  const macularHoleHeight = 20;
+  octCtx.beginPath();
+  octCtx.rect(
+    scanLineX - macularHoleWidth/2, 
+    membraneBaseY - membraneThickness, 
+    macularHoleWidth, 
+    macularHoleHeight
+  );
+  octCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  octCtx.fill();
+  octCtx.strokeStyle = 'rgba(255, 85, 85, 0.8)';
+  octCtx.lineWidth = 1;
+  octCtx.stroke();
+  
+  // Mostrar instrumento en OCT si está activo (posición invertida)
+  if(forcepsActive) {
+    // Calcular posición del instrumento en OCT basado en la posición del palo gris
+    const instrument = document.getElementById('instrument-tip');
+    const instrumentRect = instrument.getBoundingClientRect();
+    const instrumentX = instrumentRect.left + instrumentRect.width/2;
+    
+    // Mapear la posición X del instrumento a la posición en el OCT
+    const octInstrumentX = scanLineX + ((instrumentX - eye.centerX) / eye.radius) * scanWidth * 0.8;
+    
+    // Calcular profundidad basada en la distancia al centro
+    const distToCenter = Math.hypot(instrumentX - eye.centerX, instrumentRect.top - eye.centerY);
+    const instrumentDepth = Math.min(1, Math.max(0, (distToCenter - eye.radius * 0.7) / (eye.radius * 0.3)));
+    const octY = octCanvas.height * 0.8 - (instrumentDepth * octCanvas.height * 0.6);
+    
+    // Representación de la pinza en OCT (mejorada)
+    const tipSize = 8;
+    const shaftLength = 30;
+    
+    // Cuerpo de la pinza (invertido)
+    octCtx.beginPath();
+    octCtx.moveTo(octInstrumentX - scanWidth * 0.3, octY + shaftLength);
+    octCtx.lineTo(octInstrumentX, octY);
+    octCtx.lineTo(octInstrumentX + scanWidth * 0.3, octY + shaftLength);
+    octCtx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
+    octCtx.lineWidth = 2;
+    octCtx.stroke();
+    
+    // Punta de la pinza (amarilla cuando está activa)
+    octCtx.beginPath();
+    octCtx.arc(octInstrumentX, octY, tipSize, 0, Math.PI * 2);
+    octCtx.fillStyle = isActionButtonPressed ? 'rgba(255, 255, 0, 0.8)' : 'rgba(200, 200, 200, 0.6)';
+    octCtx.fill();
+    
+    // Efecto de tracción en la membrana (invertido)
+    if(isPeeling && membraneLifted) {
+      // Mostrar agarre de la membrana
+      octCtx.beginPath();
+      octCtx.moveTo(octInstrumentX - tipSize * 0.7, octY);
+      octCtx.lineTo(octInstrumentX - tipSize * 0.7, octY + tipSize * 1.5);
+      octCtx.lineTo(octInstrumentX + tipSize * 0.7, octY + tipSize * 1.5);
+      octCtx.lineTo(octInstrumentX + tipSize * 0.7, octY);
+      octCtx.fillStyle = 'rgba(255, 255, 200, 0.6)';
+      octCtx.fill();
+      
+      // Mostrar membrana siendo levantada
+      octCtx.beginPath();
+      octCtx.moveTo(octInstrumentX, octY);
+      octCtx.lineTo(octInstrumentX, octY - shaftLength * 0.5);
+      octCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      octCtx.lineWidth = 1;
+      octCtx.setLineDash([2, 2]);
+      octCtx.stroke();
+      octCtx.setLineDash([]);
+      
+      // Flecha que indica dirección de tracción (invertida)
+      octCtx.beginPath();
+      octCtx.moveTo(octInstrumentX, octY - shaftLength * 0.5);
+      octCtx.lineTo(octInstrumentX - 5, octY - shaftLength * 0.5 + 8);
+      octCtx.lineTo(octInstrumentX + 5, octY - shaftLength * 0.5 + 8);
+      octCtx.closePath();
+      octCtx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+      octCtx.fill();
+      
+      // Mostrar elevación de la membrana (invertida)
+      octCtx.font = '10px Arial';
+      octCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      octCtx.textAlign = 'center';
+      octCtx.fillText(
+        `${Math.round(membraneElevation / depthScale)} µm`, 
+        octInstrumentX, 
+        membraneBaseY - membraneElevation * 0.5
+      );
+    }
+  }
+  
+  // Efecto de ruido OCT
+  for(let i = 0; i < 300; i++) {
+    const x = Math.random() * octCanvas.width;
+    const y = Math.random() * octCanvas.height;
+    const size = Math.random() * 3;
+    const opacity = Math.random() * 0.4;
+    const isWhite = Math.random() > 0.3;
+    
+    octCtx.fillStyle = isWhite ? 
+      `rgba(255, 255, 255, ${opacity})` : 
+      `rgba(0, 0, 0, ${opacity * 0.5})`;
+    
+    if(Math.random() > 0.7) {
+      // Puntos alargados (artefactos de línea)
+      octCtx.fillRect(x, y, size * 3, size);
+    } else {
+      // Puntos normales
+      octCtx.fillRect(x, y, size, size);
+    }
+  }
+  
+  // Marcas de profundidad (invertidas)
+  octCtx.font = '10px Arial';
+  octCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  octCtx.textAlign = 'right';
+  octCtx.textBaseline = 'middle';
+  
+  for(let i = 0; i < 5; i++) {
+    const depth = i * 250;
+    const yPos = octCanvas.height - depth * depthScale;
+    
+    if(yPos > 0) {
+      octCtx.fillText(`${depth} µm`, octCanvas.width - 5, yPos);
+      
+      octCtx.beginPath();
+      octCtx.moveTo(octCanvas.width - 30, yPos);
+      octCtx.lineTo(octCanvas.width - 10, yPos);
+      octCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      octCtx.lineWidth = 1;
+      octCtx.stroke();
+    }
+  }
+  
+  // Texto de capas (invertido)
+  octCtx.font = '9px Arial';
+  octCtx.fillStyle = 'white';
+  octCtx.textAlign = 'left';
+  let layerDepth = 0;
+  retinaLayers.forEach(layer => {
+    const yPos = octCanvas.height - (layerDepth + layer.thickness * 0.5) * depthScale;
+    if(yPos > 0) {
+      octCtx.fillText(layer.name, 5, yPos);
+    }
+    layerDepth += layer.thickness;
+  });
+}
+
+// Actualizar métricas adicionales
+function updateMetrics() {
+  tensionValue.textContent = `${Math.round(membrane.tension * 100)}%`;
+  pressureValue.textContent = `${Math.round(10 + membrane.tension * 15)} mmHg`;
+  flowValue.textContent = `${Math.round(membrane.tension * 20)} µl/min`;
+}
+
+// Física del peeling
+function updatePhysics() {
+  // Actualizar tiempo de cirugía
+  surgeryTime = (Date.now() - surgeryStartTime) / 1000;
+  timeScore.textContent = `${surgeryTime.toFixed(1)}s`;
+  
+  if (isPeeling && forcepsActive) {
+    const dx = mouseX - pinchStart.x;
+    const dy = mouseY - pinchStart.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    membrane.tension = Math.min(1.5, distance / (eye.radius * membrane.tearThreshold));
+    
+    if (membrane.tension > membrane.maxTension) {
+      membrane.maxTension = membrane.tension;
+    }
+    
+    // Iniciar el peeling si se supera el umbral de fuerza
+    if (!membraneLifted && distance > eye.radius * membrane.tearThreshold * 0.7) {
+      membraneLifted = true;
+      showFeedback("Membrana despegada. Proceda con cuidado.");
+    }
+    
+    // Mover la membrana superior si está levantada
+    if (membraneLifted) {
+      membrane.flapPosition.x = mouseX;
+      membrane.flapPosition.y = mouseY;
+      
+      // Afectar puntos cercanos al punto de agarre
+      for (let i = 0; i < membrane.topLayer.length; i++) {
+        const point = membrane.topLayer[i];
+        const dist = Math.hypot(point.x - pinchStart.x, point.y - pinchStart.y);
+        
+        if (dist < eye.radius * 0.5) {
+          const influence = 1 - (dist / (eye.radius * 0.5));
+          const elasticity = point.elasticity * (1 - (damageLevel / 200));
+          
+          point.x += dx * membrane.elasticity * influence * elasticity;
+          point.y += dy * membrane.elasticity * influence * elasticity;
+          
+          // Verificar desgarros por exceso de fuerza
+          if (membrane.tension > point.tearResistance && 
+              Math.random() < membrane.tension * 0.01 && 
+              !membrane.tearPoints.some(t => Math.hypot(t.x - point.x, t.y - point.y) < 20)) {
+            
+            membrane.tearPoints.push({x: point.x, y: point.y});
+            addDamage(5 + membrane.tension * 10);
+            createBloodParticles(point.x, point.y);
+            showFeedback("¡Cuidado! Desgarro en la membrana.");
+            
+            // Romper vasos sanguíneos cercanos
+            breakBloodVesselsNear(point.x, point.y);
+          }
+        }
+      }
+    }
+    
+    // Sangrado por exceso de tensión
+    if (membrane.tension > 0.8 && Math.random() < 0.02) {
+      addDamage(1);
+      bloodOpacity = Math.min(0.3, bloodOpacity + 0.01);
+      bloodOverlay.style.opacity = bloodOpacity;
+      
+      if (membrane.tension > 1.2) {
+        showFeedback("¡Demasiada fuerza! Está dañando el tejido.");
+      }
+    }
+  }
+  
+  // Actualizar partículas de sangre
+  updateBloodParticles();
+  
+  // Actualizar overlay de sangre
+  if (bloodOpacity > 0) {
+    bloodOpacity = Math.max(0, bloodOpacity - 0.001);
+    bloodOverlay.style.opacity = bloodOpacity;
+  }
+  
+  // Actualizar métricas
+  updateMetrics();
+  
+  // Actualizar visualización OCT
+  drawOCT();
+  
+  // Actualizar sombras con retraso suave
+  const now = performance.now();
+  const deltaTime = now - lastUpdateTime;
+  if (deltaTime >= frameInterval) {
+    lastUpdateTime = now - (deltaTime % frameInterval);
+    
+    const shadowSpeed = 0.15;
+    shadowCurrentX += (shadowTargetX - shadowCurrentX) * shadowSpeed;
+    shadowCurrentY += (shadowTargetY - shadowCurrentY) * shadowSpeed;
+    
+    const tipShadow = document.querySelector('.instrument-tip-shadow');
+    tipShadow.style.left = shadowCurrentX + 'px';
+    tipShadow.style.top = shadowCurrentY + 'px';
+    
+    updateInstrumentRod();
+  }
+}
+
+// Romper vasos sanguíneos cercanos
+function breakBloodVesselsNear(x, y) {
+  for (const vessel of eye.bloodVessels) {
+    if (vessel.broken) continue;
+    
+    // Calcular distancia aproximada al vaso sanguíneo
+    const angleToCenter = Math.atan2(y - eye.centerY, x - eye.centerX);
+    const angleDiff = Math.abs(normalizeAngle(angleToCenter - vessel.angle));
+    
+    if (angleDiff < Math.PI / 6) { // Dentro de un rango angular
+      const distToCenter = Math.hypot(x - eye.centerX, y - eye.centerY);
+      const vesselDist = distToCenter - vessel.length;
+      
+      if (Math.abs(vesselDist) < eye.radius * 0.2) {
+        vessel.broken = true;
+        addDamage(10);
+        createBloodParticles(
+          eye.centerX + vessel.length * 0.5 * Math.cos(vessel.angle),
+          eye.centerY + vessel.length * 0.5 * Math.sin(vessel.angle)
+        );
+        showFeedback("¡Vaso sanguíneo roto!");
+      }
+    }
+  }
+}
+
+// Normalizar ángulo entre -PI y PI
+function normalizeAngle(angle) {
+  while (angle > Math.PI) angle -= Math.PI * 2;
+  while (angle < -Math.PI) angle += Math.PI * 2;
+  return angle;
+}
+
+// Crear partículas de sangre
+function createBloodParticles(x, y) {
+  const count = 10 + Math.floor(damageLevel / 5);
+  
+  for (let i = 0; i < count; i++) {
+    bloodParticles.push({
+      x: x + (Math.random() - 0.5) * 30,
+      y: y + (Math.random() - 0.5) * 30,
+      vx: (Math.random() - 0.5) * 3,
+      vy: (Math.random() - 0.5) * 3,
+      size: 2 + Math.random() * 5,
+      opacity: 0.5 + Math.random() * 0.5,
+      life: 100 + Math.random() * 100
+    });
+  }
+}
+
+// Actualizar partículas de sangre
+function updateBloodParticles() {
+  for (let i = bloodParticles.length - 1; i >= 0; i--) {
+    const p = bloodParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1; // Gravedad
+    p.life--;
+    p.opacity *= 0.98;
+    
+    if (p.life <= 0 || p.opacity <= 0.05) {
+      bloodParticles.splice(i, 1);
+    }
+  }
+}
+
+// Añadir daño al tejido
+function addDamage(amount) {
+  damageLevel = Math.min(100, damageLevel + amount);
+  updateScoreDisplay();
+  
+  if (damageLevel > 70 && Math.random() < 0.3) {
+    showFeedback("¡Daño crítico! Reduzca la fuerza inmediatamente.");
+  }
+}
+
+// Actualizar panel de puntuación
+function updateScoreDisplay() {
+  damageScore.textContent = `${Math.round(damageLevel)}%`;
+  
+  if (damageLevel > 30) {
+    damageScore.classList.add("warning");
+  } else {
+    damageScore.classList.remove("warning");
+  }
+}
+
+// Mostrar retroalimentación al usuario
+function showFeedback(message) {
+  const now = Date.now();
+  if (now - lastFeedbackTime < 3000) return; // Limitar frecuencia
+  
+  lastFeedbackTime = now;
+  feedbackText.textContent = message;
+  
+  // Cambiar color según severidad
+  if (message.includes("¡Cuidado!") || message.includes("¡Daño crítico!") || message.includes("¡Vaso sanguíneo")) {
+    feedbackText.style.color = "#ffaaaa";
+  } else if (message.includes("Demasiada fuerza")) {
+    feedbackText.style.color = "#ff5555";
+  } else {
+    feedbackText.style.color = "#aaffaa";
+  }
+  
+  // Mostrar el contenedor de instrucciones (arriba)
+  document.querySelector('.instructions').style.display = 'block';
+  
+  setTimeout(() => {
+    if (feedbackText.textContent === message) {
+      feedbackText.textContent = "";
+      document.querySelector('.instructions').style.display = 'none';
+    }
+  }, 5000);
+}
+
+// Eventos de interacción
+canvas.addEventListener('pointerdown', (e) => {
+  if (forcepsActive) {
+    isPeeling = true;
+    pinchStart = { x: mouseX, y: mouseY }; // Usar la posición actual del instrumento
+    
+    // Verificar si está cerca del borde de la membrana para iniciar el peeling
+    if (!membraneLifted) {
+      let closestDist = Infinity;
+      for (const point of membrane.topLayer) {
+        const dist = Math.hypot(mouseX - point.x, mouseY - point.y);
+        if (dist < closestDist) closestDist = dist;
+      }
+      
+      if (closestDist > eye.radius * 0.1) {
+        showFeedback("Acérquese al borde de la membrana para iniciar el peeling");
+        isPeeling = false;
+      }
+    }
+  }
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  // La posición del instrumento ahora se controla con el joystick
+});
+
+canvas.addEventListener('pointerup', () => {
+  if (isPeeling && membraneLifted) {
+    // Retroalimentación al soltar
+    if (membrane.maxTension > 0.8) {
+      showFeedback("Movimiento brusco detectado. Sea más suave.");
+    } else if (membrane.maxTension > 0.5) {
+      showFeedback("Buen movimiento, pero podría ser más suave.");
+    }
+    
+    membrane.maxTension = 0;
+  }
+  isPeeling = false;
+});
+
+// Botones de control
+document.getElementById('forceps-btn').addEventListener('click', () => {
+  forcepsActive = !forcepsActive;
+  document.getElementById('forceps-btn').classList.toggle('active');
+  document.getElementById('forceps-btn').textContent = 
+    forcepsActive ? "✋ Instrumento Activo" : "✋ Activar Instrumento";
+  
+  if (forcepsActive) {
+    showFeedback("Instrumento activado. Acérquese al borde de la membrana.");
+  }
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  // Aumentar dificultad después de cada reset exitoso
+  if (damageLevel < 30 && membraneLifted) {
+    difficultyLevel++;
+    showFeedback(`Nivel de dificultad aumentado a ${difficultyLevel}`);
+  } else if (damageLevel > 50) {
+    difficultyLevel = Math.max(1, difficultyLevel - 1);
+    showFeedback(`Nivel de dificultad reducido a ${difficultyLevel}`);
+  }
+  
+  initMembrane();
+});
+
+// Manejo de redimensionamiento
+window.addEventListener('resize', () => {
+  const retina = document.getElementById('eye-canvas');
+  retina.style.width = window.innerWidth + 'px';
+  retina.style.height = window.innerHeight + 'px';
+  
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  eye.centerX = canvas.width / 2;
+  eye.centerY = canvas.height / 2;
+  eye.radius = Math.min(canvas.width, canvas.height) * 0.35;
+  initMembrane();
+  setupInstrument();
+});
+
+// Inicialización
+initMembrane();
+setupInstrument();
+setupEventListeners();
+initJoysticks();
+
+// Bucle de animación
+function animate() {
+  updatePhysics();
+  drawScene();
+  checkConditions();
+  requestAnimationFrame(animate);
+}
+
+// Iniciar animación y actualización de posición del instrumento
+function startAnimation() {
+  animate();
+  requestAnimationFrame(updateInstrumentPositions);
+}
+
+function updateInstrumentPositions() {
+  updateInstrumentPosition(vitrectomoJoystickX, vitrectomoJoystickY);
+  requestAnimationFrame(updateInstrumentPositions);
+}
+
+startAnimation();
+
+// Verificar daño y completitud de membrana (versión modificada)
+function checkConditions() {
+    // Alerta por daño excesivo
+    if (damageLevel >= 80) {
+        document.getElementById('damage-alert').style.display = 'flex';
+        return;
+    }
+    
+    // Solo verificar completitud si la membrana está levantada
+    if (!membraneLifted) return;
+    
+    // Calcular el área aproximada del pedazo restante de membrana
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let pointsOverHole = 0;
+    const macularHoleRadius = eye.radius * 0.12;
+    
+    membrane.topLayer.forEach(p => {
+        // Solo considerar puntos que han sido movidos significativamente
+        if (Math.hypot(p.x - p.origX, p.y - p.origY) > eye.radius * 0.1) {
+            minX = Math.min(minX, p.x);
+            maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y);
+            
+            // Verificar si el punto está sobre el agujero macular
+            const distToHoleCenter = Math.hypot(p.x - eye.centerX, p.y - eye.centerY);
+            if (distToHoleCenter < macularHoleRadius * 1.5) {
+                pointsOverHole++;
+            }
+        }
+    });
+    
+    // Calcular tamaño aproximado del pedazo restante
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const remainingSize = Math.max(width, height);
+    
+    // Umbral para considerar que el pedazo es del tamaño del agujero macular
+    const sizeThreshold = macularHoleRadius * 2.5;
+    
+    // Condición para completar: pedazo pequeño y la mayoría de puntos sobre el agujero
+    if (remainingSize < sizeThreshold && 
+        pointsOverHole > membrane.topLayer.length * 0.7) {
+        
+        // Mover todos los puntos al centro del agujero macular
+        membrane.topLayer.forEach(p => {
+            p.x = eye.centerX;
+            p.y = eye.centerY;
+        });
+        
+        // Mostrar alerta de éxito
+        document.getElementById('success-alert').style.display = 'flex';
+        
+        // Guardar estado en localStorage
+        localStorage.setItem('membraneRemoved', 'true');
+        localStorage.setItem('simulationState', JSON.stringify({
+            procedureStep: 3,
+            vitreousRemoved: 100,
+            dyeRemoved: 100,
+            peelingProgress: 100,
+            mliPeelingStarted: true
+        }));
+    }
+}
+
+// Event listeners para los botones de alerta
+document.getElementById('reset-to-app3-btn').addEventListener('click', function() {
+    localStorage.removeItem('membraneRemoved');
+    document.getElementById('damage-alert').style.display = 'none';
+    initMembrane();
+    setupInstrument();
+});
+
+document.getElementById('continue-to-app3-btn').addEventListener('click', function() {
+    // Redirigir a app3.html manteniendo el estado
+    window.location.href = 'app3.html';
+});
+  </script>
+</body>
+</html>
